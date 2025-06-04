@@ -1,0 +1,171 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Edit User</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_view_user', user_id=user._id) }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to User
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Full Name</label>
+                            {{ form.name(class="form-control", id="name") }}
+                            {% if form.name.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.name.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email</label>
+                            {{ form.email(class="form-control", id="email") }}
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.email.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="role" class="form-label">Role</label>
+                            {{ form.role(class="form-select", id="role") }}
+                            {% if form.role.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.role.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <div class="form-check form-switch">
+                                {{ form.is_active(class="form-check-input", id="is_active") }}
+                                <label class="form-check-label" for="is_active">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if user.role == 'educator' %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label for="specialization" class="form-label">Specialization</label>
+                            {{ form.specialization(class="form-control", id="specialization") }}
+                            {% if form.specialization.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.specialization.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="bio" class="form-label">Bio</label>
+                        {{ form.bio(class="form-control", id="bio", rows="4") }}
+                        {% if form.bio.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.bio.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="profile_picture" class="form-label">Profile Picture</label>
+                        {{ form.profile_picture(class="form-control", id="profile_picture") }}
+                        {% if form.profile_picture.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.profile_picture.errors[0] }}
+                            </div>
+                        {% endif %}
+                        {% if user.avatar %}
+                        <div class="mt-2">
+                            <small class="text-muted">Current:</small>
+                            <img src="{{ get_user_avatar(user) }}" class="rounded-circle ms-2" width="50" height="50">
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Danger Zone</h5>
+            </div>
+            <div class="card-body">
+                {% if current_user.id != user._id|string %}
+                <div class="mb-3">
+                    <h6 class="text-danger">Delete User</h6>
+                    <p class="small text-muted">This action cannot be undone. All user data will be permanently removed.</p>
+                    <form method="POST" action="{{ url_for('admin_delete_user', user_id=user._id) }}">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this user?')">
+                            <i class="fas fa-trash-alt"></i> Delete User
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <h6>Reset Password</h6>
+                    <p class="small text-muted">Send a password reset way!.</p>
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}  <!-- CSRF token -->
+                        <!-- Other form fields here -->
+                        <button type="submit" class="btn btn-primary">Send Reset Link</button>
+                    </form>
+                </div>
+                
+                {% if user.role == 'educator' %}
+                <div>
+                    <h6>Educator Tools</h6>
+                    <p class="small text-muted">Manage educator-specific settings.</p>
+                    <a href="{{ url_for('admin_educator_earnings', educator_id=user._id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-chart-line"></i> View Earnings
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reset Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to send a password reset link to <strong>{{ user.email }}</strong>?</p>
+                <p class="small text-muted">The user will receive an email with instructions to reset their password.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('admin_reset_password', user_id=user._id) }}">
+                    <button type="submit" class="btn btn-primary">Send Reset Link</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

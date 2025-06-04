@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Request to Join Meeting</h4>
+                </div>
+                <div class="card-body">
+                    <h5>{{ meeting.title }}</h5>
+                    <p class="text-muted">
+                        Hosted by: {{ meeting.host_username }}<br>
+                        {% if meeting.scheduled_time %}
+                        Scheduled for: {{ meeting.scheduled_time.strftime('%B %d, %Y at %I:%M %p') }}
+                        {% endif %}
+                    </p>
+                    
+                    <div class="alert alert-info">
+                        This meeting requires approval from the host. Please send a request to join.
+                    </div>
+                    
+                    <form id="requestJoinForm" method="POST" action="{{ url_for('request_join_meeting', meeting_id=meeting.meeting_id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Message to Host (optional)</label>
+                            <textarea class="form-control" id="message" name="message" rows="3" 
+                                      placeholder="Tell the host why you want to join this meeting"></textarea>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Send Join Request
+                            </button>
+                            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

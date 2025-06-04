@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Upload New Resource</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('upload_resource') }}" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category" required>
+                                <option value="">Select Category</option>
+                                <option value="Mathematics">Mathematics</option>
+                                <option value="Science">Science</option>
+                                <option value="History">History</option>
+                                <option value="Literature">Literature</option>
+                                <option value="Technology">Technology</option>
+                                <option value="Art">Art</option>
+                                <option value="Business">Business</option>
+                                <option value="Language">Language</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" required></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Resource Type</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="type-free" value="free" checked>
+                                <label class="form-check-label" for="type-free">
+                                    Free - Available to all users
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="type-paid" value="paid">
+                                <label class="form-check-label" for="type-paid">
+                                    Premium - Users must purchase
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3" id="price-field" style="display: none;">
+                            <label for="price" class="form-label">Price ($)</label>
+                            <input type="number" class="form-control" id="price" name="price" min="0" step="0.01">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="thumbnail" class="form-label">Thumbnail Image</label>
+                            <input type="file" class="form-control" id="thumbnail" name="thumbnail" accept="image/*">
+                            <small class="text-muted">Optional. Recommended size: 800x450 pixels.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="resource_file" class="form-label">Resource File</label>
+                            <input type="file" class="form-control" id="resource_file" name="resource_file" required>
+                            <small class="text-muted">Accepted formats: PDF, DOCX, PPTX, JPG, PNG, MP4, etc.</small>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('profile', username=current_user.username) }}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Upload Resource</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const typeRadios = document.querySelectorAll('input[name="type"]');
+        const priceField = document.getElementById('price-field');
+        
+        typeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'paid') {
+                    priceField.style.display = 'block';
+                    document.getElementById('price').required = true;
+                } else {
+                    priceField.style.display = 'none';
+                    document.getElementById('price').required = false;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

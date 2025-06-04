@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Complete Your Purchase</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ resource.title }}</h5>
+                                    <p class="card-text">{{ resource.category }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h4 class="mb-0">${{ "%.2f"|format(resource.price) }}</h4>
+                                        <img src="{{ url_for('static', filename=resource.thumbnail) }}" 
+                                             class="img-fluid rounded" width="80">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Educator</h5>
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ url_for('static', filename=educator.avatar) }}" 
+                                             class="rounded-circle me-3" width="50" height="50">
+                                        <div>
+                                            <h6 class="mb-0">{{ educator.username }}</h6>
+                                            <small class="text-muted">{{ educator.specialization }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <form method="POST" id="payment-form">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="mb-3">
+                                    <label for="card_number" class="form-label">Card Number</label>
+                                    <input type="text" class="form-control" id="card_number" name="card_number" 
+                                           placeholder="4242 4242 4242 4242" required>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="card_name" class="form-label">Cardholder Name</label>
+                                    <input type="text" class="form-control" id="card_name" name="card_name" required>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="expiry_date" class="form-label">Expiry Date</label>
+                                        <input type="text" class="form-control" id="expiry_date" name="expiry_date" 
+                                               placeholder="MM/YY" required>
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="cvv" class="form-label">CVV</label>
+                                        <input type="text" class="form-control" id="cvv" name="cvv" 
+                                               placeholder="123" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary btn-lg">
+                                        <i class="fas fa-lock me-2"></i> Pay ${{ "%.2f"|format(resource.price) }}
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <div class="mt-3 text-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-lock me-1"></i> Your payment is secure and encrypted
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Format card number
+        const cardNumber = document.getElementById('card_number');
+        cardNumber.addEventListener('input', function(e) {
+            let value = this.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+            let matches = value.match(/\d{4,16}/g);
+            let match = matches && matches[0] || '';
+            let parts = [];
+            
+            for (let i=0, len=match.length; i<len; i+=4) {
+                parts.push(match.substring(i, i+4));
+            }
+            
+            if (parts.length) {
+                this.value = parts.join(' ');
+            } else {
+                this.value = value;
+            }
+        });
+        
+        // Format expiry date
+        const expiryDate = document.getElementById('expiry_date');
+        expiryDate.addEventListener('input', function(e) {
+            let value = this.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+            if (value.length > 2) {
+                this.value = value.substring(0, 2) + '/' + value.substring(2, 4);
+            }
+        });
+    });
+</script>
+{% endblock %}

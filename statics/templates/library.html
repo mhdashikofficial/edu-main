@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">My Saved Resources</h4>
+                    <a href="{{ url_for('browse_resources') }}" class="btn btn-sm btn-outline-secondary">
+                        Browse More Resources
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if saved_resources %}
+                        <div class="row row-cols-1 row-cols-md-3 g-4">
+                            {% for saved in saved_resources %}
+                            {% set resource = saved.resource %}
+                            <div class="col">
+                                <div class="card h-100">
+                                    <img src="{{ url_for('static', filename=resource.thumbnail) }}" 
+                                         class="card-img-top" 
+                                         alt="{{ resource.title }}"
+                                         <img src="{{ resource.image_url }}" onerror="this.src='{{ url_for('static', filename='images/default-resource.png') }}'">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ resource.title }}</h5>
+                                        <p class="card-text">{{ resource.description|truncate(100) }}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="badge bg-{{ 'warning' if resource.type == 'paid' else 'success' }}">
+                                                {% if resource.type == 'paid' %}
+                                                    ₹{{ resource.price }}
+                                                {% else %}
+                                                    Free
+                                                {% endif %}
+                                            </span>
+                                            <div class="btn-group">
+                                                <a href="{{ url_for('view_resource', resource_id=resource._id) }}" 
+                                                   class="btn btn-sm btn-outline-primary">
+                                                    View
+                                                </a>
+                                                {% if resource.type == 'free' or has_purchased(current_user.id, resource._id) %}
+                                                    <a href="{{ url_for('download_resource', resource_id=resource._id) }}" 
+                                                       class="btn btn-sm btn-primary">
+                                                        Download
+                                                    </a>
+                                                {% else %}
+                                                    <a href="{{ url_for('payment_page', resource_id=resource._id) }}" 
+                                                       class="btn btn-sm btn-success">
+                                                        Purchase
+                                                    </a>
+                                                {% endif %}
+                                                <button class="btn btn-sm btn-outline-danger unsave-resource" 
+                                                        data-resource-id="{{ resource._id }}">
+                                                    <i class="far fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-transparent">
+                                        <small class="text-muted">
+                                            Saved {{ saved.saved_at|timesince }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-bookmark fa-4x text-muted mb-4"></i>
+                            <h4>No saved resources yet</h4>
+                            <p class="text-muted">Save resources to access them quickly from your library</p>
+                            <a href="{{ url_for('browse_resources') }}" class="btn btn-primary mt-3">
+                                <i class="fas fa-search"></i> Browse Resources
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    // Unsave Resource
+    $('.unsave-resource').on('click', function() {
+        const resourceId = $(this).data('resource-id');
+        const $card = $(this).closest('.col');
+        
+        $.ajax({
+            url: `/resource/${resourceId}/unsave`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    $card.fadeOut(300, function() {
+                        $(this).remove();
+                        showToast('Resource removed from library', 'success');
+                    });
+                }
+            },
+            error: function() {
+                showToast('Error removing resource', 'danger');
+            }
+        });
+    });
+
+    // Toast helper function
+    function showToast(message, type = 'success') {
+        const toast = $(`
+            <div class="toast align-items-center text-white bg-${type} border-0 position-fixed bottom-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">${message}</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        `);
+        
+        $('body').append(toast);
+        const bsToast = new bootstrap.Toast(toast[0]);
+        bsToast.show();
+        
+        toast.on('hidden.bs.toast', function() {
+            $(this).remove();
+        });
+    }
+});
+</script>
+{% endblock %}

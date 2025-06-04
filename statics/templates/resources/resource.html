@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/resource.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="resource-header mb-4">
+                <h1>{{ resource.title }}</h1>
+                <div class="d-flex align-items-center mb-3">
+                    <a href="{{ url_for('profile', username=educator.username) }}" class="d-flex align-items-center text-decoration-none me-3">
+                        <img src="{{ url_for('static', filename=educator.avatar) }}" class="rounded-circle me-2" width="40" height="40">
+                        <span>{{ educator.username }}</span>
+                    </a>
+                    <span class="badge bg-primary">{{ resource.category }}</span>
+                    <span class="ms-2 text-muted">{{ resource.upload_date|timesince }}</span>
+                </div>
+                
+                {% if resource.type == 'paid' %}
+                <div class="alert alert-info d-flex align-items-center">
+                    <i class="fas fa-crown me-2"></i>
+                    <div>
+                        <strong>Premium Resource</strong> - Purchased by {{ purchases_count }} users
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-success d-flex align-items-center">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <div>
+                        <strong>Free Resource</strong> - Available to all users
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="resource-content mb-5">
+                <div class="resource-description mb-4">
+                    <h3>Description</h3>
+                    <p>{{ resource.description }}</p>
+                </div>
+                
+                {% if resource.file_url %}
+                <div class="resource-file mb-4">
+                    <h3>Resource File</h3>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="file-icon me-3">
+                                    <i class="fas {{ get_file_icon(resource.file_url) }} fa-3x"></i>
+                                </div>
+                                <div class="file-info flex-grow-1">
+                                    <h5 class="mb-1">{{ resource.file_url.split('/')[-1] }}</h5>
+                                    <small class="text-muted">{{ resource.file_type|upper }} file</small>
+                                </div>
+                                <div class="file-actions">
+                                    <a href="{{ url_for('download_resource', resource_id=resource._id) }}" class="btn btn-primary">
+                                        <i class="fas fa-download me-1"></i> Download
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="resource-comments mb-5">
+                <h3 class="mb-4">Comments ({{ comments|length }})</h3>
+                
+                {% if current_user.is_authenticated %}
+                <div class="add-comment mb-4">
+                    <form method="POST" action="{{ url_for('add_comment', resource_id=resource._id) }}">
+                        <div class="form-group">
+                            <textarea class="form-control" name="content" rows="3" placeholder="Add a comment..." required></textarea>
+                        </div>
+                        <div class="mt-2">
+                            <button type="submit" class="btn btn-primary">Post Comment</button>
+                        </div>
+                    </form>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <a href="{{ url_for('login', next=request.path) }}" class="alert-link">Login</a> to post a comment.
+                </div>
+                {% endif %}
+                
+                <div class="comments-list">
+                    {% for comment in comments %}
+                    <div class="comment mb-4" id="comment-{{ comment._id }}">
+                        <div class="d-flex">
+                            <div class="flex-shrink-0">
+                                <img src="{{ url_for('static', filename=comment.user.avatar) }}" class="rounded-circle" width="50" height="50">
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="comment-header mb-2">
+                                    <strong>{{ comment.user.username }}</strong>
+                                    <span class="text-muted ms-2">{{ comment.created_at|timesince }}</span>
+                                    {% if comment.edited %}
+                                    <span class="text-muted ms-2">(edited)</span>
+                                    {% endif %}
+                                </div>
+                                <div class="comment-body mb-2">
+                                    {{ comment.content }}
+                                </div>
+                                <div class="comment-actions">
+                                    {% if current_user.is_authenticated and (current_user.id == comment.user_id or current_user.role == 'admin') %}
+                                    <button class="btn btn-sm btn-outline-secondary edit-comment-btn" data-comment-id="{{ comment._id }}">Edit</button>
+                                    <form method="POST" action="{{ url_for('delete_comment', resource_id=resource._id, comment_id=comment._id) }}" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Edit Comment Form (Hidden by default) -->
+                                <div class="edit-comment-form mt-3" style="display: none;" id="edit-form-{{ comment._id }}">
+                                    <form method="POST" action="{{ url_for('edit_comment', resource_id=resource._id, comment_id=comment._id) }}">
+                                        <div class="form-group mb-2">
+                                            <textarea class="form-control" name="content" rows="3" required>{{ comment.content }}</textarea>
+                                        </div>
+                                        <div>
+                                            <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                                            <button type="button" class="btn btn-secondary btn-sm cancel-edit-btn" data-comment-id="{{ comment._id }}">Cancel</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                
+                                <!-- Replies -->
+                                {% if comment.replies %}
+                                <div class="replies mt-3 ms-4">
+                                    {% for reply in comment.replies %}
+                                    <div class="reply mb-3">
+                                        <div class="d-flex">
+                                            <div class="flex-shrink-0">
+                                                <img src="{{ url_for('static', filename=reply.user.avatar) }}" class="rounded-circle" width="40" height="40">
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <div class="reply-header mb-1">
+                                                    <strong>{{ reply.user.username }}</strong>
+                                                    <span class="text-muted ms-2">{{ reply.created_at|timesince }}</span>
+                                                </div>
+                                                <div class="reply-body">
+                                                    {{ reply.content }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Add Reply Form -->
+                                {% if current_user.is_authenticated %}
+                                <div class="add-reply mt-3 ms-4">
+                                    <form method="POST" action="{{ url_for('add_reply', resource_id=resource._id, comment_id=comment._id) }}">
+                                        <div class="form-group mb-2">
+                                            <textarea class="form-control" name="content" rows="2" placeholder="Add a reply..." required></textarea>
+                                        </div>
+                                        <div>
+                                            <button type="submit" class="btn btn-primary btn-sm">Reply</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="resource-sidebar">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">About the Educator</h5>
+                        <div class="d-flex align-items-center mb-3">
+                            <img src="{{ url_for('static', filename=educator.avatar) }}" class="rounded-circle me-3" width="60" height="60">
+                            <div>
+                                <h6 class="mb-0">{{ educator.username }}</h6>
+                                <small class="text-muted">{{ educator.specialization }}</small>
+                            </div>
+                        </div>
+                        <p class="card-text">{{ educator.bio|truncate(150) }}</p>
+                        <a href="{{ url_for('profile', username=educator.username) }}" class="btn btn-outline-primary btn-sm">View Profile</a>
+                        <a href="{{ url_for('chat', educator_id=educator._id) }}" class="btn btn-primary btn-sm ms-2">Message</a>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Resource Details</h5>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Type</span>
+                                <span class="badge bg-{{ 'primary' if resource.type == 'paid' else 'success' }}">
+                                    {{ resource.type|capitalize }}
+                                </span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Category</span>
+                                <span>{{ resource.category }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Upload Date</span>
+                                <span>{{ resource.upload_date.strftime('%B %d, %Y') }}</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Downloads</span>
+                                <span>{{ resource.downloads }}</span>
+                            </li>
+                            {% if resource.type == 'paid' %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>Price</span>
+                                <span>${{ "%.2f"|format(resource.price) }}</span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Related Resources</h5>
+                        {% for related in related_resources %}
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <i class="fas {{ get_file_icon(related.file_url) }} me-2"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-2">
+                                    <a href="{{ url_for('view_resource', resource_id=related._id) }}" class="text-decoration-none">
+                                        {{ related.title|truncate(30) }}
+                                    </a>
+                                    <div class="text-muted small">{{ related.category }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/resource.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    .form-section {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .section-title {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 15px;
+        border-bottom: 1px solid #dee2e6;
+        padding-bottom: 8px;
+    }
+    .feature-icon {
+        font-size: 1.2rem;
+        margin-right: 8px;
+        color: #3498db;
+    }
+    .form-check-label {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-video me-2"></i> Create New Meeting</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('create_meeting') }}" id="meetingForm">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Basic Information Section -->
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="fas fa-info-circle feature-icon"></i>Basic Information</h5>
+                            
+                            <div class="mb-3">
+                                {{ form.title.label(class="form-label") }}
+                                {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Enter meeting title") }}
+                                {% for error in form.title.errors %}
+                                    <div class="invalid-feedback">{{ error }}</div>
+                                {% endfor %}
+                                <small class="text-muted">Give your meeting a descriptive title</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.description.label(class="form-label") }}
+                                {{ form.description(class="form-control", rows=3, placeholder="Optional meeting description") }}
+                            </div>
+                        </div>
+                        
+                        <!-- Schedule Section -->
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="fas fa-clock feature-icon"></i>Schedule</h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.scheduled_time.label(class="form-label") }}
+                                    <div class="input-group">
+                                        {{ form.scheduled_time(class="form-control datetimepicker" + (" is-invalid" if form.scheduled_time.errors else "")) }}
+                                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                    </div>
+                                    {% for error in form.scheduled_time.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                    <small class="text-muted">Leave empty for immediate meeting</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    {{ form.duration.label(class="form-label") }}
+                                    <div class="input-group">
+                                        {{ form.duration(class="form-control" + (" is-invalid" if form.duration.errors else "")) }}
+                                        <span class="input-group-text">minutes</span>
+                                    </div>
+                                    {% for error in form.duration.errors %}
+                                        <div class="invalid-feedback">{{ error }}</div>
+                                    {% endfor %}
+                                    <small class="text-muted">Between 15-240 minutes</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Meeting Settings Section -->
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="fas fa-cog feature-icon"></i>Meeting Settings</h5>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.requires_approval(class="form-check-input") }}
+                                    {{ form.requires_approval.label(class="form-check-label") }}
+                                    <small class="text-muted d-block">Participants must request to join</small>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.is_private(class="form-check-input") }}
+                                    {{ form.is_private.label(class="form-check-label") }}
+                                    <small class="text-muted d-block">Only invited users can join</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Features Section -->
+                        <div class="form-section">
+                            <h5 class="section-title"><i class="fas fa-star feature-icon"></i>Features</h5>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.enable_chat(class="form-check-input", checked=True) }}
+                                    {{ form.enable_chat.label(class="form-check-label") }}
+                                    <small class="text-muted d-block">Enable text chat during meeting</small>
+                                </div>
+                                
+                                <div class="form-check form-switch mb-3">
+                                    {{ form.enable_notes(class="form-check-input", checked=True) }}
+                                    {{ form.enable_notes.label(class="form-check-label") }}
+                                    <small class="text-muted d-block">Enable collaborative notes</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg py-3">
+                                <i class="fas fa-video me-2"></i> Create Meeting
+                            </button>
+                            <a href="{{ url_for('profile', username=current_user.username) }}" class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize datetime picker with more options
+    flatpickr(".datetimepicker", {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "today",
+        defaultDate: new Date(),
+        minuteIncrement: 15,
+        time_24hr: true,
+        disableMobile: true, // Better UX on mobile
+        onReady: function(selectedDates, dateStr, instance) {
+            instance.set('minTime', new Date());
+        }
+    });
+    
+    // Form validation
+    const form = document.getElementById('meetingForm');
+    form.addEventListener('submit', function(e) {
+        const duration = parseInt(document.getElementById('duration').value);
+        if (duration < 15 || duration > 240) {
+            e.preventDefault();
+            alert('Duration must be between 15 and 240 minutes');
+            return false;
+        }
+        
+        const scheduledTime = document.getElementById('scheduled_time').value;
+        if (scheduledTime) {
+            const selectedTime = new Date(scheduledTime);
+            const now = new Date();
+            const minTime = new Date(now.getTime() + 15 * 60000); // 15 minutes from now
+            
+            if (selectedTime < minTime) {
+                e.preventDefault();
+                alert('Meeting must be scheduled at least 15 minutes in the future');
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    // Toggle private meeting options
+    const privateToggle = document.getElementById('is_private');
+    privateToggle.addEventListener('change', function() {
+        // You can add dynamic UI changes here if needed
+    });
+});
+</script>
+{% endblock %}

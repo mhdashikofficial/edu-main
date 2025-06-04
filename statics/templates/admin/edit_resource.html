@@ -1,0 +1,177 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Edit Resource</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{{ url_for('admin_view_resource', resource_id=resource._id) }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Resource
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control") }}
+                        {% if form.title.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.title.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows=5) }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-control") }}
+                            {% if form.category.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.category.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.type.label(class="form-label") }}
+                            {{ form.type(class="form-select") }}
+                            {% if form.type.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.type.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="priceField" style="display: {% if form.type.data == 'paid' %}block{% else %}none{% endif %};">
+                        {{ form.price.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            {{ form.price(class="form-control") }}
+                        </div>
+                        {% if form.price.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.price.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            {{ form.is_active(class="form-check-input") }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.file.label(class="form-label") }}
+                        {{ form.file(class="form-control") }}
+                        {% if resource.file_url %}
+                            <small class="form-text text-muted">
+                                Current file: <a href="{{ url_for('static', filename=resource.file_url) }}" target="_blank">View</a>
+                            </small>
+                        {% endif %}
+                        {% if form.file.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.file.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        {{ form.thumbnail.label(class="form-label") }}
+                        {{ form.thumbnail(class="form-control") }}
+                        {% if resource.thumbnail %}
+                            <small class="form-text text-muted">
+                                Current thumbnail: <img src="{{ url_for('static', filename=resource.thumbnail) }}" width="100" class="mt-2">
+                            </small>
+                        {% endif %}
+                        {% if form.thumbnail.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.thumbnail.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Resource Details</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-5">Uploaded by:</dt>
+                    <dd class="col-sm-7">
+                        {% if resource.educator_id in educators %}
+                            <a href="{{ url_for('admin_view_user', user_id=resource.educator_id) }}">
+                                {{ educators[resource.educator_id] }}
+                            </a>
+                        {% else %}
+                            Unknown
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-5">Upload date:</dt>
+                    <dd class="col-sm-7">
+                        {% if resource.upload_date %}
+                            {{ resource.upload_date|datetimeformat('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </dd>
+                    
+                    <dt class="col-sm-5">Downloads:</dt>
+                    <dd class="col-sm-7">{{ resource.downloads|default(0) }}</dd>
+                    
+                    <dt class="col-sm-5">Last updated:</dt>
+                    <dd class="col-sm-7">
+                        {% if resource.updated_at %}
+                            {{ resource.updated_at|datetimeformat('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                            Never
+                        {% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.getElementById('type');
+    const priceField = document.getElementById('priceField');
+    
+    if (typeSelect && priceField) {
+        typeSelect.addEventListener('change', function() {
+            priceField.style.display = this.value === 'paid' ? 'block' : 'none';
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Edit Meeting{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Edit Meeting: {{ meeting.title }}</h2>
+    <div class="card">
+        <div class="card-body">
+            <form id="editMeetingForm" method="POST" action="{{ url_for('edit_meeting', meeting_id=meeting._id) }}">
+                {{ form.hidden_tag() }}
+                
+                <div class="form-group">
+                    {{ form.title.label(class="form-label") }}
+                    {{ form.title(class="form-control") }}
+                    {% if form.title.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.title.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group mt-3">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows=4) }}
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.scheduled_time.label(class="form-label") }}
+                            {{ form.scheduled_time(class="form-control", type="datetime-local") }}
+                            {% if form.scheduled_time.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.scheduled_time.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.duration.label(class="form-label") }}
+                            {{ form.duration(class="form-select") }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.meeting_type.label(class="form-label") }}
+                            {{ form.meeting_type(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group form-check mt-4 pt-2">
+                            {{ form.waiting_room(class="form-check-input") }}
+                            {{ form.waiting_room.label(class="form-check-label") }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">Update Meeting</button>
+                    <a href="{{ url_for('view_meeting', meeting_id=meeting._id) }}" class="btn btn-secondary">Cancel</a>
+                    <button type="button" class="btn btn-danger float-end" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        Cancel Meeting
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Meeting Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelModalLabel">Cancel Meeting</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel this meeting? All participants will be notified.</p>
+                <p><strong>This action cannot be undone.</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <form action="{{ url_for('cancel_meeting', meeting_id=meeting._id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.getElementById('editMeetingForm');
+    form.addEventListener('submit', function(e) {
+        const title = document.getElementById('title').value.trim();
+        const scheduledTime = document.getElementById('scheduled_time').value;
+        
+        if (!title) {
+            e.preventDefault();
+            alert('Meeting title is required');
+            return;
+        }
+        
+        if (!scheduledTime) {
+            e.preventDefault();
+            alert('Scheduled time is required');
+            return;
+        }
+        
+        const selectedTime = new Date(scheduledTime);
+        if (selectedTime < new Date()) {
+            e.preventDefault();
+            alert('Meeting time must be in the future');
+            return;
+        }
+    });
+});
+</script>
+{% endblock %}

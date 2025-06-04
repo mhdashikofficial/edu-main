@@ -1,0 +1,165 @@
+/* Admin Dashboard Styles */
+body {
+    background-color: #f8f9fa;
+}
+
+.admin-wrapper {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+}
+
+#sidebar {
+    min-width: 250px;
+    max-width: 250px;
+    min-height: 100vh;
+    transition: all 0.3s;
+}
+
+#sidebar.active {
+    margin-left: -250px;
+}
+
+#content {
+    width: 100%;
+    min-height: 100vh;
+    transition: all 0.3s;
+}
+
+#content.active {
+    width: 100%;
+}
+
+#sidebar .sidebar-header {
+    background-color: #343a40;
+}
+
+#sidebar ul.components {
+    padding: 20px 0;
+}
+
+#sidebar ul li a {
+    padding: 10px 15px;
+    display: block;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all 0.3s;
+}
+
+#sidebar ul li a:hover {
+    background-color: #495057;
+    border-left: 3px solid #007bff;
+}
+
+#sidebar ul li.active > a {
+    background-color: #495057;
+    border-left: 3px solid #007bff;
+}
+
+.navbar {
+    padding: 15px 15px;
+    background: #fff;
+    border: none;
+    border-radius: 0;
+    margin-bottom: 40px;
+    box-shadow: 1px 1px 3px rgba(0, 0, 0, 0.1);
+    margin-left: -5px;
+    margin-right: -15px;
+    top: -56px;
+}
+
+@media (max-width: 768px) {
+    #sidebar {
+        margin-left: -250px;
+    }
+    #sidebar.active {
+        margin-left: 0;
+    }
+    #content {
+        width: 100%;
+    }
+    #content.active {
+        margin-left: 250px;
+        width: calc(100% - 250px);
+    }
+    .navbar{
+         margin-left: -5px;
+    margin-right: -15px;
+    }
+}
+
+/* Custom Card Styles */
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: #1c4771;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+/* Table Styles */
+.table-responsive {
+    margin-bottom: 20px;
+}
+
+.table th {
+    border-top: none;
+}
+
+/* Form Styles */
+.form-control, .form-select {
+    margin-bottom: 10px;
+}
+
+/* Badge Styles */
+.badge {
+    font-weight: normal;
+}
+
+/* Alert Styles */
+.alert {
+    margin-bottom: 20px;
+}
+
+/* Progress Bar Styles */
+.progress {
+    margin-bottom: 20px;
+}
+
+/* Custom Button Styles */
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* Avatar Styles */
+.rounded-circle {
+    object-fit: cover;
+}
+
+/* Custom Utilities */
+.mb-6 {
+    margin-bottom: 4rem;
+}
+
+/* Chart Container */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+/* Include the navbar CSS here */
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1050;
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    padding-top: 0px;
+}

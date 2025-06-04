@@ -1,0 +1,262 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Manage Meetings{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4">Manage Meetings</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>Meetings</h2>
+                <div>
+                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="mb-4">
+                <form class="form-inline mb-3">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="Search meetings..." 
+                               value="{{ search_query }}">
+                        <div class="input-group-append">
+                            <button class="btn btn-primary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="btn-group ml-3" role="group">
+                        <a href="{{ url_for('admin_meetings', status='upcoming') }}" 
+                           class="btn btn-outline-primary {% if current_status == 'upcoming' %}active{% endif %}">
+                            Upcoming
+                        </a>
+                        <a href="{{ url_for('admin_meetings', status='active') }}" 
+                           class="btn btn-outline-primary {% if current_status == 'active' %}active{% endif %}">
+                            Active
+                        </a>
+                        <a href="{{ url_for('admin_meetings', status='past') }}" 
+                           class="btn btn-outline-primary {% if current_status == 'past' %}active{% endif %}">
+                            Past
+                        </a>
+                        <a href="{{ url_for('admin_meetings', status='cancelled') }}" 
+                           class="btn btn-outline-primary {% if current_status == 'cancelled' %}active{% endif %}">
+                            Cancelled
+                        </a>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Title</th>
+                            <th>Educator</th>
+                            <th>Scheduled Time</th>
+                            <th>Status</th>
+                            <th>Participants</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for meeting in meetings %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('admin_view_meeting', meeting_id=meeting._id) }}">
+                                    {{ meeting.title }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if educators[meeting.educator_id] %}
+                                <a href="{{ url_for('admin_view_user', user_id=meeting.educator_id) }}">
+                                    {{ educators[meeting.educator_id].username }}
+                                </a>
+                                {% else %}
+                                Unknown
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if meeting.scheduled_time %}
+                                {{ meeting.scheduled_time.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                Not scheduled
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if meeting.status == 'active' %}badge-success
+                                    {% elif meeting.status == 'cancelled' %}badge-danger
+                                    {% else %}badge-info{% endif %}">
+                                    {{ meeting.status|capitalize }}
+                                </span>
+                            </td>
+                            <td>
+                                {{ meeting_participants.count_documents({'meeting_id': meeting._id, 'status': 'approved'}) }}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('admin_view_meeting', meeting_id=meeting._id) }}" 
+                                       class="btn btn-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if meeting.status != 'cancelled' %}
+                                    <button class="btn btn-danger cancel-meeting" 
+                                            data-id="{{ meeting._id }}" title="Cancel">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-danger delete-meeting" 
+                                            data-id="{{ meeting._id }}" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center">No meetings found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if pagination.pages > 1 %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" 
+                           href="{{ url_for('admin_meetings', page=pagination.page-1, status=current_status, q=search_query) }}">
+                            Previous
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in range(1, pagination.pages + 1) %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" 
+                           href="{{ url_for('admin_meetings', page=page_num, status=current_status, q=search_query) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if pagination.page < pagination.pages %}
+                    <li class="page-item">
+                        <a class="page-link" 
+                           href="{{ url_for('admin_meetings', page=pagination.page+1, status=current_status, q=search_query) }}">
+                            Next
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Meeting Modal -->
+<div class="modal fade" id="cancelMeetingModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancel Meeting</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel this meeting? All participants will be notified.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="confirmCancel">Cancel Meeting</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Meeting Modal -->
+<div class="modal fade" id="deleteMeetingModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Meeting</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanently delete this meeting? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete Meeting</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    let currentMeetingId = null;
+    
+    // Cancel meeting handler
+    $('.cancel-meeting').click(function() {
+        currentMeetingId = $(this).data('id');
+        $('#cancelMeetingModal').modal('show');
+    });
+    
+    $('#confirmCancel').click(function() {
+        if (!currentMeetingId) return;
+        
+        $.ajax({
+            url: `/admin/meetings/${currentMeetingId}/cancel`,
+            method: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message || 'Error cancelling meeting');
+                }
+            },
+            error: function() {
+                alert('Error cancelling meeting');
+            }
+        });
+    });
+    
+    // Delete meeting handler
+    $('.delete-meeting').click(function() {
+        currentMeetingId = $(this).data('id');
+        $('#deleteMeetingModal').modal('show');
+    });
+    
+    $('#confirmDelete').click(function() {
+        if (!currentMeetingId) return;
+        
+        $.ajax({
+            url: `/admin/meetings/${currentMeetingId}/delete`,
+            method: 'POST',
+            success: function() {
+                location.reload();
+            },
+            error: function() {
+                alert('Error deleting meeting');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

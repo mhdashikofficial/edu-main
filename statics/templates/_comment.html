@@ -1,0 +1,134 @@
+<div class="comment mb-3" id="comment-{{ comment._id }}">
+    <div class="d-flex">
+        <!-- Profile picture with proper URL handling -->
+        {% if comment.avatar %}
+            {% if comment.avatar.startswith('uploads/') %}
+                <!-- Replace this part in your template -->
+<img src="{{ url_for('static', filename=comment.user.avatar) if comment.user.avatar.startswith('uploads/') else url_for('static', filename='images/' + comment.user.avatar) if comment.user.avatar else (url_for('static', filename='images/default-avatar.png') if comment.user.role == 'educator' else url_for('static', filename='images/default-avatar1.png') }}" 
+     class="rounded-circle me-2" width="40" height="40" 
+     alt="{{ comment.user.username }}'s profile picture">
+        <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <div>
+                    <strong>{{ comment.username }}</strong>
+                    {% if comment.role == 'educator' %}
+                        <span class="badge bg-primary ms-2">Educator</span>
+                    {% endif %}
+                    {% if comment.edited %}
+                        <small class="text-muted ms-2">(edited)</small>
+                    {% endif %}
+                </div>
+                <small class="text-muted">{{ comment.timestamp|timesince }}</small>
+            </div>
+            <div class="comment-content mb-2">
+                {{ comment.content|markdown }}
+            </div>
+            <div class="comment-actions">
+                {% if current_user.is_authenticated %}
+                <button class="btn btn-sm btn-outline-secondary like-comment" data-comment-id="{{ comment._id }}" data-resource-id="{{ resource._id }}">
+                    <i class="{{ 'fas' if current_user.id in comment.likes else 'far' }} fa-thumbs-up"></i>
+                    <span class="like-count">{{ comment.likes|length if comment.likes else 0 }}</span>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary dislike-comment" data-comment-id="{{ comment._id }}" data-resource-id="{{ resource._id }}">
+                    <i class="{{ 'fas' if current_user.id in comment.dislikes else 'far' }} fa-thumbs-down"></i>
+                    <span class="dislike-count">{{ comment.dislikes|length if comment.dislikes else 0 }}</span>
+                </button>
+
+                {% if current_user.id == comment.user_id or is_admin %}
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-ellipsis-h"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item edit-comment" href="#" data-comment-id="{{ comment._id }}" data-resource-id="{{ resource._id }}">
+                                <i class="fas fa-edit me-2"></i>Edit
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item text-danger delete-comment" href="#" data-comment-id="{{ comment._id }}" data-resource-id="{{ resource._id }}">
+                                <i class="fas fa-trash me-2"></i>Delete
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if has_access or is_admin or current_user.id == resource.educator_id %}
+                <button class="btn btn-sm btn-outline-secondary reply-comment" data-comment-id="{{ comment._id }}" data-resource-id="{{ resource._id }}">
+                    <i class="fas fa-reply me-1"></i>Reply
+                </button>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Replies -->
+            {% if comment.replies %}
+            <div class="replies mt-3 ms-4">
+                {% for reply in comment.replies %}
+                <div class="reply mb-3">
+                    <div class="d-flex">
+                        <!-- Reply profile picture -->
+                        {% if reply.avatar %}
+                            {% if reply.avatar.startswith('uploads/') %}
+                               <!-- Replace this part in your template -->
+<img src="{{ url_for('static', filename=comment.user.avatar) if comment.user.avatar.startswith('uploads/') else url_for('static', filename='images/' + comment.user.avatar) if comment.user.avatar else (url_for('static', filename='images/default-avatar.png') if comment.user.role == 'educator' else url_for('static', filename='images/default-avatar1.png') }}" 
+     class="rounded-circle me-2" width="40" height="40" 
+     alt="{{ comment.user.username }}'s profile picture">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div>
+                                    <strong>{{ reply.username }}</strong>
+                                    {% if reply.role == 'educator' %}
+                                        <span class="badge bg-primary ms-2">Educator</span>
+                                    {% endif %}
+                                    {% if reply.edited %}
+                                        <small class="text-muted ms-2">(edited)</small>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">{{ reply.timestamp|timesince }}</small>
+                            </div>
+                            <div class="reply-content mb-2">
+                                {{ reply.content|markdown }}
+                            </div>
+                            <div class="reply-actions">
+                                {% if current_user.is_authenticated %}
+                                <button class="btn btn-sm btn-outline-secondary like-comment" data-comment-id="{{ reply._id }}" data-resource-id="{{ resource._id }}">
+                                    <i class="{{ 'fas' if current_user.id in reply.likes else 'far' }} fa-thumbs-up"></i>
+                                    <span class="like-count">{{ reply.likes|length if reply.likes else 0 }}</span>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary dislike-comment" data-comment-id="{{ reply._id }}" data-resource-id="{{ resource._id }}">
+                                    <i class="{{ 'fas' if current_user.id in reply.dislikes else 'far' }} fa-thumbs-down"></i>
+                                    <span class="dislike-count">{{ reply.dislikes|length if reply.dislikes else 0 }}</span>
+                                </button>
+
+                                {% if current_user.id == reply.user_id or is_admin %}
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-h"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item edit-comment" href="#" data-comment-id="{{ reply._id }}" data-resource-id="{{ resource._id }}">
+                                                <i class="fas fa-edit me-2"></i>Edit
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger delete-comment" href="#" data-comment-id="{{ reply._id }}" data-resource-id="{{ resource._id }}">
+                                                <i class="fas fa-trash me-2"></i>Delete
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>

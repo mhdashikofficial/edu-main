@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Edit Resource</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" action="{{ url_for('edit_resource', resource_id=resource._id) }}">
+                    {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control") }}
+                            {% for error in form.title.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=5) }}
+                            {% for error in form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.category.label(class="form-label") }}
+                            {{ form.category(class="form-control") }}
+                            {% for error in form.category.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.type.label(class="form-label") }}
+                            {{ form.type(class="form-select") }}
+                            {% for error in form.type.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3" id="price-field" style="display: {% if form.type.data == 'paid' %}block{% else %}none{% endif %}">
+                            {{ form.price.label(class="form-label") }}
+                            {{ form.price(class="form-control") }}
+                            {% for error in form.price.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.is_active.label(class="form-check-label") }}
+                            {{ form.is_active(class="form-check-input") }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Current File</label>
+                            <div class="current-file">
+                                <i class="fas {{ get_file_icon(resource.file_url) }} me-2"></i>
+                                <span>{{ resource.file_url.split('/')[-1] if resource.file_url else 'No file uploaded' }}</span>
+                            </div>
+                            {{ form.file.label(class="form-label mt-2") }}
+                            {{ form.file(class="form-control") }}
+                            {% for error in form.file.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+        <label class="form-label">Current Thumbnail</label>
+        <div class="current-thumbnail mb-2">
+            {% if resource.thumbnail %}
+                <img src="{{ url_for('static', filename=resource.thumbnail) }}" class="img-thumbnail" style="max-height: 100px;">
+            {% else %}
+                <span class="text-muted">No thumbnail uploaded</span>
+            {% endif %}
+        </div>
+        {{ form.thumbnail.label(class="form-label") }}
+        {{ form.thumbnail(class="form-control") }}
+        <small class="text-muted">Upload a new thumbnail image (optional)</small>
+        {% for error in form.thumbnail.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+        {% endfor %}
+    </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Update Resource</button>
+                            <a href="{{ url_for('view_resource', resource_id=resource._id) }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide price field based on resource type
+    const typeSelect = document.querySelector('#type');
+    const priceField = document.querySelector('#price-field');
+    
+    if (typeSelect && priceField) {
+        typeSelect.addEventListener('change', function() {
+            priceField.style.display = this.value === 'paid' ? 'block' : 'none';
+        });
+    }
+});
+</script>
+{% endblock %}

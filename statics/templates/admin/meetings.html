@@ -1,0 +1,303 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Meeting Management</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('create_meeting') }}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-plus"></i> Create Meeting
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="meetingsTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="upcoming-tab" data-bs-toggle="tab" data-bs-target="#upcoming" type="button" role="tab">Upcoming</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="past-tab" data-bs-toggle="tab" data-bs-target="#past" type="button" role="tab">Past</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="cancelled-tab" data-bs-toggle="tab" data-bs-target="#cancelled" type="button" role="tab">Cancelled</button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="meetingsTabContent">
+            <div class="tab-pane fade show active" id="upcoming" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Host</th>
+                                <th>Scheduled</th>
+                                <th>Duration</th>
+                                <th>Participants</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for meeting in upcoming_meetings %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('view_meeting', meeting_id=meeting.meeting_id) }}">
+                                        {{ meeting.title }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('admin_view_user', user_id=meeting.host_id) }}">
+                                        {{ meeting.host_username }}
+                                    </a>
+                                </td>
+                                <td>{{ meeting.scheduled_time|datetimeformat('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ meeting.duration }} mins</td>
+                                <td>{{ meeting.participants|length }}</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ meeting.status|replace('_', ' ')|title }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{{ url_for('view_meeting', meeting_id=meeting.meeting_id) }}" class="btn btn-outline-primary" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if current_user.id == meeting.host_id or current_user.role == 'admin' %}
+                                        <a href="{{ url_for('edit_meeting', meeting_id=meeting.meeting_id) }}" class="btn btn-outline-secondary" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form method="POST" action="{{ url_for('cancel_meeting', meeting_id=meeting.meeting_id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-outline-danger" title="Cancel" onclick="return confirm('Are you sure you want to cancel this meeting?')">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">No upcoming meetings</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="past" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Host</th>
+                                <th>Date</th>
+                                <th>Duration</th>
+                                <th>Participants</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for meeting in past_meetings %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('view_meeting', meeting_id=meeting.meeting_id) }}">
+                                        {{ meeting.title }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('admin_view_user', user_id=meeting.host_id) }}">
+                                        {{ meeting.host_username }}
+                                    </a>
+                                </td>
+                                <td>{{ meeting.scheduled_time|datetimeformat('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ meeting.duration }} mins</td>
+                                <td>{{ meeting.participants|length }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ meeting.status|replace('_', ' ')|title }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{{ url_for('view_meeting', meeting_id=meeting.meeting_id) }}" class="btn btn-outline-primary" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('meeting_report', meeting_id=meeting.meeting_id) }}" class="btn btn-outline-info" title="Report">
+                                            <i class="fas fa-chart-bar"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="7" class="text-center">No past meetings</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="tab-pane fade" id="cancelled" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Host</th>
+                                <th>Date</th>
+                                <th>Reason</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for meeting in cancelled_meetings %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('view_meeting', meeting_id=meeting.meeting_id) }}">
+                                        {{ meeting.title }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('admin_view_user', user_id=meeting.host_id) }}">
+                                        {{ meeting.host_username }}
+                                    </a>
+                                </td>
+                                <td>{{ meeting.scheduled_time|datetimeformat('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ meeting.cancellation_reason or 'Not specified' }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{{ url_for('view_meeting', meeting_id=meeting.meeting_id) }}" class="btn btn-outline-primary" title="View">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">No cancelled meetings</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Meeting Statistics</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="meetingsChart" width="100%" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Top Hosts</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="hostsChart" width="100%" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+     document.addEventListener('DOMContentLoaded', function() {
+        // Meeting statistics chart
+        const meetingsCtx = document.getElementById('meetingsChart').getContext('2d');
+        const meetingsChart = new Chart(meetingsCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Upcoming', 'Completed', 'Cancelled'],
+                datasets: [{
+                    label: 'Meetings',
+                    data: [{{ upcoming_count }}, {{ completed_count }}, {{ cancelled_count }}],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(255, 99, 132, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(255, 99, 132, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Meeting Status Distribution'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        
+        // Top hosts chart
+        const hostsCtx = document.getElementById('hostsChart').getContext('2d');
+        const hostsChart = new Chart(hostsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ host_names|default([]) | tojson }},
+                datasets: [{
+                    data: {{ host_counts|default({}) | tojson }},
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Top Meeting Hosts'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

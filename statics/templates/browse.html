@@ -1,0 +1,344 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('browse_resources') }}">
+                        <div class="mb-3">
+                            <label for="q" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="q" name="q" 
+                                   value="{{ request.args.get('q', '') }}" 
+                                   placeholder="Search resources...">
+                            <small class="text-muted">Search by title, description, category </small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                    <option value="{{ category }}" 
+                                            {% if request.args.get('category') == category %}selected{% endif %}>
+                                        {{ category }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Resource Type</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="type-all" 
+                                       value="all" {% if request.args.get('type', 'all') == 'all' %}checked{% endif %}>
+                                <label class="form-check-label" for="type-all">All Types</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="type-free" 
+                                       value="free" {% if request.args.get('type') == 'free' %}checked{% endif %}>
+                                <label class="form-check-label" for="type-free">Free Only</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="type-paid" 
+                                       value="paid" {% if request.args.get('type') == 'paid' %}checked{% endif %}>
+                                <label class="form-check-label" for="type-paid">Premium Only</label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="sort" class="form-label">Sort By</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="recent" {% if request.args.get('sort', 'recent') == 'recent' %}selected{% endif %}>
+                                    Most Recent
+                                </option>
+                                <option value="popular" {% if request.args.get('sort') == 'popular' %}selected{% endif %}>
+                                    Most Popular
+                                </option>
+                                <option value="rating" {% if request.args.get('sort') == 'rating' %}selected{% endif %}>
+                                    Highest Rated
+                                </option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-filter me-1"></i> Apply Filters
+                        </button>
+                        <a href="{{ url_for('browse_resources') }}" class="btn btn-outline-secondary w-100 mt-2">
+                            <i class="fas fa-sync-alt me-1"></i> Reset
+                        </a>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="">
+                    <div class="list-group">
+                        {% for educator in featured_educators %}
+                            <a href="{{ url_for('profile', username=educator.username) }}" 
+                               class="list-group-item list-group-item-action d-flex align-items-center">
+                                <img src="{{ get_user_avatar(educator) }}" 
+                                     class="rounded-circle me-3" width="40" height="40" 
+                                     alt="{{ educator.username }}">
+                                <div>
+                                    <h6 class="mb-0">{{ educator.username }}</h6>
+                                    <small class="text-muted">{{ educator.specialization or 'Educator' }}</small>
+                                </div>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    {% if request.args.get('q') %}
+                        Search Results for "{{ request.args.get('q') }}"
+                    {% elif request.args.get('type') == 'free' %}
+                        Free Resources
+                    {% elif request.args.get('type') == 'paid' %}
+                        Premium Resources
+                    {% else %}
+                        Browse Resources
+                    {% endif %}
+                </h2>
+                <div>
+                    <span class="text-muted">{{ pagination.total }} resources found</span>
+                    {% if current_user.is_authenticated and current_user.role == 'educator' %}
+                        <a href="{{ url_for('upload_resource') }}" class="btn btn-primary ms-3">
+                            <i class="fas fa-plus me-1"></i> Upload Resource
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if resources %}
+                <div class="row">
+                    {% for resource in resources %}
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 resource-card">
+                                <div class="resource-thumbnail">
+                                    {% if resource.thumbnail %}
+                                        <img src="{{ url_for('static', filename=resource.thumbnail) }}" 
+                                             class="card-img-top" alt="{{ resource.title }}">
+                                    {% else %}
+                                        <div class="thumbnail-placeholder">
+                                            <i class="{{ get_file_icon(resource.file_url) }} fa-3x"></i>
+                                        </div>
+                                    {% endif %}
+                                    {% if resource.type == 'paid' %}
+                                        <span class="badge bg-success price-badge">
+                                            ${{ "%.2f"|format(resource.price) }}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-info price-badge">FREE</span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <a href="{{ url_for('view_resource', resource_id=resource._id) }}">
+                                            {{ resource.title|truncate(40) }}
+                                        </a>
+                                    </h5>
+                                    <p class="card-text text-muted small mb-2">
+                                        <i class="fas fa-tag me-1"></i> {{ resource.category }}
+                                    </p>
+                                    <p class="card-text small text-truncate">
+                                        {{ resource.description|truncate(100) }}
+                                    </p>
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <div>
+                                            <span class="text-muted small me-2">
+                                                <i class="fas fa-download me-1"></i> {{ resource.downloads }}
+                                            </span>
+                                            {% if resource.rating %}
+                                                <span class="text-warning small">
+                                                    <i class="fas fa-star me-1"></i> {{ "%.1f"|format(resource.rating) }}
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <a href="{{ url_for('view_resource', resource_id=resource._id) }}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            View Details
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div class="card-footer bg-transparent">
+                                    <div class="d-flex align-items-center">
+                                        {% set educator = educators.get(resource.educator_id, {}) %}
+                                        <img src="{{ get_user_avatar(educator) }}"
+                                             class="rounded-circle me-2" width="30" height="30" 
+                                             alt="{{ educator.get('username', 'Unknown') }}">
+                                        <small class="text-muted">
+                                            <a href="{{ url_for('profile', username=educator.get('username', '')) }}" 
+                                               class="text-decoration-none">
+                                                {{ educator.get('username', 'Unknown') }}
+                                            </a>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                            {% if pagination.pages > 1 %}
+                <nav aria-label="Resource pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if pagination.page > 1 %}
+                            <li class="page-item">
+                                {% set args = request.args.to_dict() %}
+                                {% set _ = args.update({'page': pagination.page-1}) %}
+                                <a class="page-link" 
+                                href="{{ url_for('browse_resources', **args) }}" 
+                                aria-label="Previous">
+                                    <span aria-hidden="true">&laquo;</span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {% for page_num in range(1, pagination.pages + 1) %}
+                            {% if page_num >= pagination.page - 2 and page_num <= pagination.page + 2 %}
+                                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                                    {% set args = request.args.to_dict() %}
+                                    {% set _ = args.update({'page': page_num}) %}
+                                    <a class="page-link" 
+                                    href="{{ url_for('browse_resources', **args) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if pagination.page < pagination.pages %}
+                            <li class="page-item">
+                                {% set args = request.args.to_dict() %}
+                                {% set _ = args.update({'page': pagination.page+1}) %}
+                                <a class="page-link" 
+                                href="{{ url_for('browse_resources', **args) }}" 
+                                aria-label="Next">
+                                    <span aria-hidden="true">&raquo;</span>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+            {% else %}
+                <div class="alert alert-info text-center py-4">
+                    <div class="mb-3">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h4>No resources found</h4>
+                    </div>
+                    <p class="mb-3">
+                        {% if request.args.get('q') %}
+                            No resources match your search for "{{ request.args.get('q') }}".
+                        {% else %}
+                            No resources found matching your criteria.
+                        {% endif %}
+                    </p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <a href="{{ url_for('browse_resources') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-sync-alt me-1"></i> Reset Filters
+                        </a>
+                        {% if current_user.is_authenticated and current_user.role == 'educator' %}
+                            <a href="{{ url_for('upload_resource') }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i> Upload Resource
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .resource-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    .resource-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .resource-thumbnail {
+        position: relative;
+        height: 160px;
+        overflow: hidden;
+        background-color: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .resource-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .thumbnail-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        color: #6c757d;
+    }
+    
+    .price-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 0.8rem;
+        padding: 5px 8px;
+    }
+    
+    .card-footer {
+        border-top: none;
+        background-color: rgba(0,0,0,0.03);
+    }
+    
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+    }
+    
+    .list-group-item:first-child {
+        border-top: none;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Highlight search term in results
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchTerm = "{{ request.args.get('q', '') }}";
+        if (searchTerm) {
+            const cards = document.querySelectorAll('.card-body');
+            cards.forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(searchTerm.toLowerCase())) {
+                    card.closest('.resource-card').style.border = '2px solid #0d6efd';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

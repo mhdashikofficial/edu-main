@@ -1,0 +1,191 @@
+<!-- templates/base.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    <title>{% block title %}EduResourceHub{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
+    <!-- Custom CSS -->
+     <link rel="stylesheet" href="{{ url_for('static', filename='css/messages.css') }}">
+     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/resource.css') }}">
+
+    {% block extra_css %}{% endblock %}
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" href="{{ url_for('index') }}">EduResourceHub</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('browse_resources') }}">Resources</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('browse_educators') }}">Educators</a>
+                </li>
+                
+                {% if current_user.is_authenticated and current_user.role == 'educator' %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('create_meeting') }}">Create Meeting</a>
+                </li>
+                {% endif %}
+            </ul>
+
+            <ul class="navbar-nav">
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
+                            <img src="{{ url_for('static', filename=current_user.data.avatar) }}"
+                                 class="rounded-circle me-1" width="30" height="30"
+                                 onerror="this.src='{{ url_for('static', filename='images/default-avatar.png') }}'">
+                            {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('profile', username=current_user.username) }}">Profile</a></li>
+                            {% if current_user.role == 'educator' %}
+                                <li><a class="dropdown-item" href="{{ url_for('upload_resource') }}">Upload Resource</a></li>
+                            {% endif %}
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- Messages -->
+              
+                                        
+                    <!-- In your navbar section -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link position-relative" href="#" id="messagesDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-envelope"></i>
+                            {% if get_unread_count(current_user.id) > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6em;">
+                                {{ get_unread_count(current_user.id) }}
+                                <span class="visually-hidden">unread messages</span>
+                            </span>
+                            {% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end p-0" style="width: 300px;">
+                            <li class="dropdown-header bg-light py-2">Messages</li>
+                            <li>
+                                <div class="dropdown-item p-0">
+                                    <div class="list-group list-group-flush">
+                                        {% for conversation in chat_conversations %}
+                                            <a href="{{ url_for('view_chat', chat_id=conversation.chat_id) }}" 
+                                            class="list-group-item list-group-item-action border-0 py-2 px-3 {% if conversation.unread_count > 0 %}bg-light{% endif %}">
+                                                <div class="d-flex align-items-center">
+                                                    <img src="{{ conversation.avatar }}" 
+                                                        class="rounded-circle me-2" width="30" height="30"
+                                                        onerror="this.src='{{ url_for('static', filename='images/default-avatar.png') }}'">
+                                                    <div class="flex-grow-1">
+                                                        <div class="d-flex justify-content-between">
+                                                            <strong>{{ conversation.name }}</strong>
+                                                            <small class="text-muted">{{ conversation.last_message.timestamp | datetimeformat }}</small>
+                                                        </div>
+                                                        <div class="text-truncate" style="max-width: 220px;">
+                                                            {% if conversation.last_message.sender_id == current_user.id %}
+                                                                You: 
+                                                            {% endif %}
+                                                            {{ conversation.last_message.content | truncate(30) }}
+                                                        </div>
+                                                    </div>
+                                                    {% if conversation.unread_count > 0 %}
+                                                        <span class="badge bg-primary rounded-pill ms-2">
+                                                            {{ conversation.unread_count }}
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </a>
+                                        {% else %}
+                                            <div class="text-center py-3 text-muted">
+                                                No messages yet
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </li>
+                            <li><hr class="dropdown-divider m-0"></li>
+                            <li>
+                                <a class="dropdown-item text-center py-2" href="{{ url_for('chat_list') }}">
+                                    View All Messages
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Flash Messages -->
+<div class="container mt-3">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+
+<!-- Page Content -->
+<main class="container my-4">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- Footer -->
+<footer class="bg-light py-4 mt-5">
+    <div class="container text-center">
+        <p class="mb-0">&copy; {{ current_year }} EduResourceHub. All rights reserved.</p>
+    </div>
+</footer>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src='https://meet.jit.si/external_api.js'></script>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<!-- Custom JS -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+{% block extra_js %}{% endblock %}
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

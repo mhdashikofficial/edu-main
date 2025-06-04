@@ -1,0 +1,111 @@
+/* Messages dropdown styling */
+#messagesDropdown {
+    position: relative;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+}
+
+/* Envelope Icon */
+#messagesDropdown .fa-envelope {
+    font-size: 1.25rem;
+    margin-right: 5px; /* Add a small margin to the right of the icon */
+}
+
+/* Badge for unread count */
+#messagesDropdown .badge {
+    font-size: 0.6em;
+    padding: 3px 6px;
+    position: relative; /* Position relative to the parent */
+}
+
+/* Responsive styles for medium screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+    #messagesDropdown .fa-envelope {
+        font-size: 1.15rem; /* Adjusted for medium screens */
+    }
+
+    #messagesDropdown .badge {
+        font-size: 0.65em;
+        padding: 3px 7px;
+        margin-left: 0;
+    }
+}
+
+/* Responsive styles for small screens */
+@media (max-width: 768px) {
+    #messagesDropdown .fa-envelope {
+        font-size: 1.1rem; /* Slightly smaller icon */
+    }
+
+    #messagesDropdown .badge {
+        font-size: 0.7em;
+        padding: 4px 8px;
+        margin-left: -660px;
+    }
+}
+
+/* Responsive styles for extra small screens */
+@media (max-width: 480px) {
+    #messagesDropdown .fa-envelope {
+        font-size: 1rem; /* Even smaller icon */
+    }
+
+    #messagesDropdown .badge {
+        font-size: 0.8em;
+        padding: 5px 10px;
+        margin-left: -380px;
+    }
+}
+
+
+/* Dropdown menu styling */
+.dropdown-menu-messages {
+    width: 320px;
+    padding: 0;
+}
+
+.dropdown-menu-messages .dropdown-header {
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+/* Message item styling */
+.message-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f8f9fa;
+    transition: background-color 0.2s;
+}
+
+.message-item:hover {
+    background-color: #f8f9fa;
+    text-decoration: none;
+}
+
+.message-item.unread {
+    background-color: #f8f9fa;
+}
+
+.message-item .message-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.message-item .message-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.message-item .message-sender {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+/* Unread badge in dropdown */
+.message-item .unread-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}

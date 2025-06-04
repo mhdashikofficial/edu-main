@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('browse_resources') }}">
+                        <div class="mb-3">
+                            <label for="q" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="q" name="q" value="{{ request.args.get('q', '') }}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category</label>
+                            <select class="form-select" id="category" name="category">
+                                <option value="">All Categories</option>
+                                {% for category in categories %}
+                                <option value="{{ category }}" {% if request.args.get('category') == category %}selected{% endif %}>{{ category }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Resource Type</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="type-all" value="all" 
+                                       {% if request.args.get('type', 'all') == 'all' %}checked{% endif %}>
+                                <label class="form-check-label" for="type-all">All Types</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="type-free" value="free" 
+                                       {% if request.args.get('type') == 'free' %}checked{% endif %}>
+                                <label class="form-check-label" for="type-free">Free Only</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="type-paid" value="paid" 
+                                       {% if request.args.get('type') == 'paid' %}checked{% endif %}>
+                                <label class="form-check-label" for="type-paid">Premium Only</label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="sort" class="form-label">Sort By</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="recent" {% if request.args.get('sort', 'recent') == 'recent' %}selected{% endif %}>Most Recent</option>
+                                <option value="popular" {% if request.args.get('sort') == 'popular' %}selected{% endif %}>Most Popular</option>
+                                <option value="rating" {% if request.args.get('sort') == 'rating' %}selected{% endif %}>Highest Rated</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Apply Filters</button>
+                        <a href="{{ url_for('browse_resources') }}" class="btn btn-outline-secondary w-100 mt-2">Reset</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">Resources</h2>
+                <div>
+                    <span class="text-muted">{{ pagination.total }} results</span>
+                    {% if current_user.is_authenticated and current_user.role == 'educator' %}
+                    <a href="{{ url_for('upload_resource') }}" class="btn btn-primary ms-3">
+                        <i class="fas fa-plus me-1"></i> Upload
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if resources %}
+            <div class="row">
+                {% for resource in resources %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100">
+                        <img src="{{ url_for('static', filename=resource.thumbnail) }}" 
+                             class="card-img-top" alt="{{ resource.title }}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ resource.title }}</h5>
+                            <p class="card-text text-muted">{{ resource.category }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-download me-1"></i> {{ resource.downloads }}
+                                    {% if resource.type == 'paid' %}
+                                    <i class="fas fa-dollar-sign ms-2 me-1"></i> {{ resource.price }}
+                                    {% endif %}
+                                </small>
+                                <a href="{{ url_for('view_resource', resource_id=resource._id) }}" class="btn btn-sm btn-primary">View</a>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename=educators[resource.educator_id].avatar) }}" 
+                                     class="rounded-circle me-2" width="30" height="30">
+                                <small class="text-muted">{{ educators[resource.educator_id].username }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if pagination.page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('browse_resources', page=pagination.page-1, q=request.args.get('q'), category=request.args.get('category'), type=request.args.get('type'), sort=request.args.get('sort')) }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in range(1, pagination.pages + 1) %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('browse_resources', page=page_num, q=request.args.get('q'), category=request.args.get('category'), type=request.args.get('type'), sort=request.args.get('sort')) }}">{{ page_num }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if pagination.page < pagination.pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('browse_resources', page=pagination.page+1, q=request.args.get('q'), category=request.args.get('category'), type=request.args.get('type'), sort=request.args.get('sort')) }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% else %}
+            <div class="alert alert-info">
+                No resources found matching your criteria. Try adjusting your filters.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

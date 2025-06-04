@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container chat-container py-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">Your Conversations</h4>
+        </div>
+        <div class="card-body p-0">
+            <div class="list-group list-group-flush chat-list">
+                {% for conversation in chat_conversations %}
+                <a href="{{ url_for('chat', educator_id=conversation.educator_id) }}" 
+                   class="list-group-item list-group-item-action">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('static', filename=conversation.educator_avatar) }}" 
+                             class="rounded-circle me-3" width="50" height="50">
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">{{ conversation.educator_name }}</h6>
+                                {% if conversation.unread_count > 0 %}
+                                <span class="badge bg-danger rounded-pill">{{ conversation.unread_count }}</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">
+                                {% if conversation.last_message %}
+                                {{ conversation.last_message.message|truncate(30) }}
+                                {% else %}
+                                No messages yet
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

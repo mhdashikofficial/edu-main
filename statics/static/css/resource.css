@@ -1,0 +1,38 @@
+/* Resource page specific styles */
+.resource-description {
+    line-height: 1.6;
+}
+
+.resource-description img {
+    max-width: 100%;
+    height: auto;
+}
+
+.rating-star {
+    color: #ffc107;
+    cursor: pointer;
+    font-size: 1.5rem;
+    margin-right: 0.2rem;
+}
+
+.rating-star.checked {
+    color: #ffc107;
+}
+
+.comment-item {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+.comment-actions {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.comment-item:hover .comment-actions {
+    opacity: 1;
+}

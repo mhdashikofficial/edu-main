@@ -1,0 +1,300 @@
+/* static/css/styles.css */
+/* Base styles */
+body {
+    padding-top: 0px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Chat specific styles */
+.chat-container {
+    height: calc(100vh - 150px);
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.chat-header {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.chat-messages {
+    height: calc(100% - 120px);
+    overflow-y: auto;
+    padding: 15px;
+}
+
+.message {
+    margin-bottom: 15px;
+    max-width: 80%;
+}
+
+.message-sent {
+    margin-left: auto;
+    background-color: #007bff;
+    color: white;
+    border-radius: 18px 18px 0 18px;
+    padding: 10px 15px;
+}
+
+.message-received {
+    margin-right: auto;
+    background-color: #f1f1f1;
+    border-radius: 18px 18px 18px 0;
+    padding: 10px 15px;
+}
+
+.message-time {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.chat-input {
+    padding: 15px;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Notification dropdown styles */
+.dropdown-menu {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Avatar styles */
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* Resource card styles */
+.resource-card {
+    transition: transform 0.2s;
+}
+
+.resource-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .chat-container {
+        height: calc(100vh - 200px);
+    }
+}
+.meeting-card {
+    transition: transform 0.2s;
+    margin-bottom: 15px;
+}
+
+.meeting-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.meeting-badge {
+    font-size: 0.8rem;
+    margin-right: 5px;
+}
+
+.meeting-time {
+    font-size: 0.9rem;
+}
+
+.meeting-host {
+    font-size: 0.85rem;
+    color: #666;
+}
+/* Message dropdown styles */
+#messagesDropdown .badge {
+    font-size: 0.6rem;
+    padding: 3px 5px;
+}
+
+.dropdown-menu .list-group-item {
+    border-left: 0;
+    border-right: 0;
+}
+
+.dropdown-menu .list-group-item:first-child {
+    border-top: 0;
+}
+
+.dropdown-menu .list-group-item:last-child {
+    border-bottom: 0;
+}
+
+.dropdown-menu .list-group-item:hover {
+    background-color: #f8f9fa;
+}
+
+.dropdown-menu {
+    max-height: 400px;
+    overflow-y: auto;
+}
+/* ------------------------------
+   Responsive Enhancements
+------------------------------ */
+
+/* Extra small devices (max-width: 576px) */
+@media (max-width: 576px) {
+    body {
+        padding-top: 60px;
+        font-size: 0.9rem;
+    }
+
+    .chat-container {
+        height: calc(100vh - 180px);
+        border-radius: 0;
+    }
+
+    .chat-header,
+    .chat-input {
+        padding: 10px;
+    }
+
+    .chat-messages {
+        padding: 10px;
+    }
+
+    .message {
+        max-width: 100%;
+        font-size: 0.9rem;
+    }
+
+    .message-sent,
+    .message-received {
+        padding: 8px 12px;
+        border-radius: 16px;
+    }
+
+    .message-time {
+        font-size: 0.65rem;
+    }
+
+    .avatar {
+        width: 35px;
+        height: 35px;
+    }
+
+    .dropdown-menu {
+        font-size: 0.85rem;
+    }
+
+    .meeting-card {
+        font-size: 0.85rem;
+    }
+
+    .meeting-time,
+    .meeting-host {
+        font-size: 0.8rem;
+    }
+}
+
+/* Small to medium devices (577px - 768px) */
+@media (min-width: 577px) and (max-width: 768px) {
+    .chat-container {
+        height: calc(100vh - 170px);
+    }
+
+    .message {
+        max-width: 90%;
+    }
+
+    .avatar {
+        width: 38px;
+        height: 38px;
+    }
+
+    .chat-header,
+    .chat-input {
+        padding: 12px;
+    }
+
+    .message-sent,
+    .message-received {
+        font-size: 0.95rem;
+    }
+
+    .dropdown-menu {
+        font-size: 0.9rem;
+    }
+}
+
+/* Medium to large devices (769px - 992px) */
+@media (min-width: 769px) and (max-width: 992px) {
+    .chat-container {
+        height: calc(100vh - 160px);
+    }
+
+    .message {
+        max-width: 85%;
+    }
+
+    .avatar {
+        width: 40px;
+        height: 40px;
+    }
+
+    .chat-header,
+    .chat-input {
+        padding: 15px;
+    }
+
+    .dropdown-menu {
+        font-size: 1rem;
+    }
+    .navbar-expand-lg {
+        top: -56px;
+    }
+}
+/* Notification badge styles */
+.notification-badge {
+    position: relative;
+    display: inline-block;
+}
+
+.notification-badge[data-badge]:after {
+    content: attr(data-badge);
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: 0.7em;
+    background: #dc3545;
+    color: white;
+    width: 18px;
+    height: 18px;
+    text-align: center;
+    line-height: 18px;
+    border-radius: 50%;
+    box-shadow: 0 0 1px #333;
+}
+
+/* Message dropdown animations */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.new-message {
+    animation: pulse 1s infinite;
+}
+
+/* Include the navbar CSS here */
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1050;
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+body {
+    padding-top: 0px;
+}
+

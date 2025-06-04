@@ -1,0 +1,309 @@
+{% extends "admin/layout.html" %}
+
+{% block title %}Meeting Details - {{ meeting.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Meeting Details</h1>
+        <a href="{{ url_for('admin_meetings') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Meetings
+        </a>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Meeting Information</h6>
+                    <div class="dropdown no-arrow">
+                        <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" 
+                           data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v fa-sm fa-fw text-gray-400"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right shadow animated--fade-in" 
+                             aria-labelledby="dropdownMenuLink">
+                            {% if meeting.status != 'cancelled' %}
+                            <button class="dropdown-item cancel-meeting" data-id="{{ meeting._id }}">
+                                <i class="fas fa-ban text-danger"></i> Cancel Meeting
+                            </button>
+                            {% endif %}
+                            <button class="dropdown-item delete-meeting" data-id="{{ meeting._id }}">
+                                <i class="fas fa-trash text-danger"></i> Delete Meeting
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h4>{{ meeting.title }}</h4>
+                            <p class="text-muted">{{ meeting.description }}</p>
+                            
+                            <div class="mb-3">
+                                <h5>Details</h5>
+                                <ul class="list-unstyled">
+                                    <li><strong>Status:</strong> 
+                                        <span class="badge 
+                                            {% if meeting.status == 'active' %}badge-success
+                                            {% elif meeting.status == 'cancelled' %}badge-danger
+                                            {% else %}badge-info{% endif %}">
+                                            {{ meeting.status|capitalize }}
+                                        </span>
+                                    </li>
+                                    <li><strong>Created:</strong> {{ meeting.created_at.strftime('%Y-%m-%d %H:%M') }}</li>
+                                    {% if meeting.scheduled_time %}
+                                    <li><strong>Scheduled:</strong> {{ meeting.scheduled_time.strftime('%Y-%m-%d %H:%M') }}</li>
+                                    {% endif %}
+                                    {% if meeting.started_at %}
+                                    <li><strong>Started:</strong> {{ meeting.started_at.strftime('%Y-%m-%d %H:%M') }}</li>
+                                    {% endif %}
+                                    {% if meeting.ended_at %}
+                                    <li><strong>Ended:</strong> {{ meeting.ended_at.strftime('%Y-%m-%d %H:%M') }}</li>
+                                    {% endif %}
+                                    {% if meeting.cancelled_at %}
+                                    <li><strong>Cancelled:</strong> {{ meeting.cancelled_at.strftime('%Y-%m-%d %H:%M') }}</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold">Educator</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <img class="rounded-circle mr-3" 
+                                             src="{{ url_for('static', filename=educator.avatar) }}" 
+                                             width="50" height="50" alt="Educator Avatar">
+                                        <div>
+                                            <h6 class="mb-0">{{ educator.username }}</h6>
+                                            <small class="text-muted">{{ educator.specialization }}</small>
+                                            <div>
+                                                <a href="{{ url_for('admin_view_user', user_id=educator._id) }}" 
+                                                   class="btn btn-sm btn-outline-primary mt-2">
+                                                    View Profile
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="m-0 font-weight-bold">Meeting Stats</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row text-center">
+                                        <div class="col-6 border-right">
+                                            <div class="text-primary font-weight-bold h5">
+                                                {{ participants|length }}
+                                            </div>
+                                            <div class="text-muted small">Participants</div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="text-primary font-weight-bold h5">
+                                                {{ requests|length }}
+                                            </div>
+                                            <div class="text-muted small">Requests</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Chat Messages</h6>
+                </div>
+                <div class="card-body">
+                    {% if chat_messages %}
+                    <div class="chat-container" style="max-height: 400px; overflow-y: auto;">
+                        {% for msg in chat_messages %}
+                        <div class="mb-3">
+                            <div class="d-flex align-items-center mb-1">
+                                <img src="{{ url_for('static', filename=msg.avatar) }}" 
+                                     class="rounded-circle mr-2" width="30" height="30">
+                                <strong>{{ msg.username }}</strong>
+                                <small class="text-muted ml-2">
+                                    {{ msg.timestamp.strftime('%H:%M') }}
+                                </small>
+                            </div>
+                            <div class="pl-4">
+                                {{ msg.message }}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No chat messages yet</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Participants</h6>
+                </div>
+                <div class="card-body">
+                    {% if participants %}
+                    <div class="list-group">
+                        {% for p in participants %}
+                        <div class="list-group-item">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename=p.user.avatar) }}" 
+                                     class="rounded-circle mr-3" width="40" height="40">
+                                <div>
+                                    <h6 class="mb-0">{{ p.user.username }}</h6>
+                                    <small class="text-muted">
+                                        Joined: {{ p.joined_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No participants yet</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Join Requests</h6>
+                </div>
+                <div class="card-body">
+                    {% if requests %}
+                    <div class="list-group">
+                        {% for r in requests %}
+                        <div class="list-group-item">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename=r.student.avatar) }}" 
+                                     class="rounded-circle mr-3" width="40" height="40">
+                                <div>
+                                    <h6 class="mb-0">{{ r.student.username }}</h6>
+                                    <small class="text-muted">
+                                        Requested: {{ r.requested_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </small>
+                                    <div class="mt-2">
+                                        <span class="badge 
+                                            {% if r.status == 'approved' %}badge-success
+                                            {% elif r.status == 'rejected' %}badge-danger
+                                            {% else %}badge-warning{% endif %}">
+                                            {{ r.status|capitalize }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No pending requests</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Meeting Modal -->
+<div class="modal fade" id="cancelMeetingModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancel Meeting</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to cancel this meeting? All participants will be notified.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="confirmCancel">Cancel Meeting</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Meeting Modal -->
+<div class="modal fade" id="deleteMeetingModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Meeting</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanently delete this meeting? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete Meeting</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function() {
+    let currentMeetingId = '{{ meeting._id }}';
+    
+    // Cancel meeting handler
+    $('.cancel-meeting').click(function() {
+        $('#cancelMeetingModal').modal('show');
+    });
+    
+    $('#confirmCancel').click(function() {
+        $.ajax({
+            url: `/admin/meetings/${currentMeetingId}/cancel`,
+            method: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message || 'Error cancelling meeting');
+                }
+            },
+            error: function() {
+                alert('Error cancelling meeting');
+            }
+        });
+    });
+    
+    // Delete meeting handler
+    $('.delete-meeting').click(function() {
+        $('#deleteMeetingModal').modal('show');
+    });
+    
+    $('#confirmDelete').click(function() {
+        $.ajax({
+            url: `/admin/meetings/${currentMeetingId}/delete`,
+            method: 'POST',
+            success: function() {
+                window.location.href = "{{ url_for('admin_meetings') }}";
+            },
+            error: function() {
+                alert('Error deleting meeting');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

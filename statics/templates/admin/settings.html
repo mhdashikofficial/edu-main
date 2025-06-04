@@ -1,0 +1,180 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">System Settings</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">General Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="site_name" class="form-label">Site Name</label>
+                        {{ form.site_name(class="form-control", id="site_name") }}
+                        {% if form.site_name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.site_name.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="site_description" class="form-label">Site Description</label>
+                        {{ form.site_description(class="form-control", id="site_description", rows="3") }}
+                        {% if form.site_description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.site_description.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="default_user_role" class="form-label">Default User Role</label>
+                        {{ form.default_user_role(class="form-select", id="default_user_role") }}
+                        {% if form.default_user_role.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.default_user_role.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3 form-check form-switch">
+                        {{ form.enable_registration(class="form-check-input", id="enable_registration") }}
+                        <label class="form-check-label" for="enable_registration">Enable User Registration</label>
+                    </div>
+                    
+                    <div class="mb-3 form-check form-switch">
+                        {{ form.resource_approval_required(class="form-check-input", id="resource_approval_required") }}
+                        <label class="form-check-label" for="resource_approval_required">Require Resource Approval</label>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="max_upload_size" class="form-label">Max Upload Size (MB)</label>
+                        {{ form.max_upload_size(class="form-control", id="max_upload_size") }}
+                        {% if form.max_upload_size.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.max_upload_size.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">System Information</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2"><strong>Platform Version:</strong> 1.0.0</li>
+                    <li class="mb-2"><strong>Database:</strong> MongoDB</li>
+                    <li class="mb-2"><strong>Server:</strong> {{ server_info }}</li>
+                    <li class="mb-2"><strong>Python Version:</strong> {{ python_version }}</li>
+                    <li class="mb-2"><strong>Flask Version:</strong> {{ flask_version }}</li>
+                    <li><strong>Uptime:</strong> {{ uptime }}</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Storage</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong>Resources:</strong>
+                        <span>{{ storage_usage.resources if storage_usage else 0 }} MB</span>
+                    </div>
+                    <div class="progress mt-1" style="height: 5px;">
+                        <div class="progress-bar" role="progressbar" 
+                            style="width: {{ ((storage_usage.resources if storage_usage else 0) / (storage_usage.total if storage_usage else 1)) * 100 }}%">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong>Avatars:</strong>
+                        <span>{{ storage_usage.avatars }} MB</span>
+                    </div>
+                    <div class="progress mt-1" style="height: 5px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (storage_usage.avatars / (storage_usage.total or 1)) * 100 }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong>Thumbnails:</strong>
+                        <span>{{ storage_usage.thumbnails }} MB</span>
+                    </div>
+                    <div class="progress mt-1" style="height: 5px;">
+                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ (storage_usage.thumbnails / (storage_usage.total or 1)) * 100 }}%"></div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong>Total Used:</strong>
+                        <span>{{ storage_usage.used }} MB / {{ storage_usage.total }} MB</span>
+                    </div>
+                    <div class="progress mt-1" style="height: 5px;">
+                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ (storage_usage.used / (storage_usage.total or 1)) * 100 }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Maintenance</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>Clear Cache</h6>
+                    <p class="small text-muted">Remove temporary cached files.</p>
+                    <form method="POST" action="{{ url_for('admin_clear_cache') }}">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-broom"></i> Clear Cache
+                        </button>
+                    </form>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Rebuild Indexes</h6>
+                    <p class="small text-muted">Optimize database performance.</p>
+                    <form method="POST" action="{{ url_for('admin_rebuild_indexes') }}">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-sync-alt"></i> Rebuild Indexes
+                        </button>
+                    </form>
+                </div>
+                
+                <div>
+                    <h6>Backup Database</h6>
+                    <p class="small text-muted">Create a full system backup.</p>
+                    <form method="POST" action="{{ url_for('admin_backup_database') }}">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-database"></i> Create Backup
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

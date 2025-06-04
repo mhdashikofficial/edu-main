@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h4>Meeting Created Successfully!</h4>
+        </div>
+        <div class="card-body">
+            <h5>Meeting Details:</h5>
+            <p><strong>Title:</strong> {{ meeting.title }}</p>
+            <p><strong>Meeting ID:</strong> {{ meeting_id }}</p>
+            
+            <div class="mb-3">
+                <label class="form-label">Share this meeting link:</label>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="meetingUrl" 
+                           value="{{ meeting_url }}" readonly>
+                    <button class="btn btn-outline-secondary" onclick="copyMeetingUrl()">
+                        Copy
+                    </button>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                <a href="{{ url_for('join_meeting', meeting_id=meeting_id) }}" 
+                   class="btn btn-primary me-md-2">
+                    Join Meeting Now
+                </a>
+                <a href="{{ url_for('profile', username=current_user.username) }}" 
+                   class="btn btn-outline-secondary">
+                    Back to Profile
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyMeetingUrl() {
+    const copyText = document.getElementById("meetingUrl");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    
+    // Show tooltip or alert
+    alert("Meeting link copied to clipboard!");
+}
+</script>
+{% endblock %}

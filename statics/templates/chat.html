@@ -1,0 +1,559 @@
+<!-- templates/chat.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Messages</h5>
+                    <button class="btn btn-sm btn-outline-primary" id="newChatBtn">
+                        <i class="fas fa-plus"></i> New
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="conversationList">
+                        {% for conv in chat_conversations %}
+                        <a href="{{ url_for('view_chat', chat_id=conv.chat_id) }}"
+                            class="list-group-item list-group-item-action {% if conv.chat_id == chat._id|string %}active{% endif %}"
+                            data-chat-id="{{ conv.chat_id }}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename=conv.avatar) }}" class="rounded-circle me-2"
+                                        width="40" height="40" loading="lazy"
+                                        onerror="this.src='{{ url_for('static', filename='images/default-avatar.png') }}'">
+                                    <h6 class="mb-0">{{ conv.name }}</h6>
+                                </div>
+                                {% if conv.unread_count > 0 %}
+                                <span class="badge bg-danger rounded-pill">{{ conv.unread_count }}</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">
+                                {% if conv.last_message %}
+                                {{ conv.last_message.content|truncate(30) }}
+                                {% else %}
+                                No messages yet
+                                {% endif %}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat area -->
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ url_for('static', filename=other_user.avatar) }}" class="rounded-circle me-2"
+                            width="40" height="40" loading="lazy"
+                            onerror="this.src='{{ url_for('static', filename='images/default-avatar.png') }}'">
+                        <h5 class="mb-0">{{ other_user.name or other_user.username }}</h5>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" id="loadMoreBtn">
+                        <i class="fas fa-history"></i> Load Older
+                    </button>
+                </div>
+
+                <!-- Messages -->
+                <div class="card-body chat-body" id="messageContainer">
+                    <div class="text-center my-5" id="loadingSpinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input -->
+                <div class="card-footer">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="messageInput" placeholder="Type your message..." autocomplete="off">
+                        <button class="btn btn-primary" id="sendMessageBtn">
+                            <i class="fas fa-paper-plane"></i> Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Chat Modal -->
+<div class="modal fade" id="newChatModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Start New Chat</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Educator</label>
+                    <select class="form-select" id="educatorSelect">
+                        <option value="" selected disabled>Choose an educator</option>
+                        {% for educator in educators %}
+                        <option value="{{ educator._id }}">{{ educator.name }} ({{ educator.specialization }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="startChatBtn">Start Chat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script>
+    // Defer initialization until DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        const currentChatId = "{{ chat._id }}";
+        const csrf_token = "{{ csrf_token() }}";
+        const currentUserId = "{{ current_user.id }}";
+        let socket;
+        let isInitialLoad = true;
+        let isLoadingMessages = false;
+
+        // Initialize chat with debounced functions
+        function initializeChat() {
+            setupSocket();
+            setupEventHandlers();
+            
+            // Use requestIdleCallback for non-critical initialization
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(() => {
+                    loadMessages();
+                }, { timeout: 1000 });
+            } else {
+                setTimeout(loadMessages, 300);
+            }
+        }
+
+        // Scroll to bottom with debounce
+        const scrollToBottom = debounce(function(animate = true) {
+            const container = document.getElementById('messageContainer');
+            if (!container) return;
+            
+            if (animate) {
+                container.style.scrollBehavior = 'smooth';
+            } else {
+                container.style.scrollBehavior = 'auto';
+            }
+            container.scrollTop = container.scrollHeight;
+            
+            // Reset scroll behavior
+            setTimeout(() => {
+                container.style.scrollBehavior = 'auto';
+            }, 500);
+        }, 100);
+
+        // Load messages with performance optimizations
+        function loadMessages() {
+            if (isLoadingMessages) return;
+            isLoadingMessages = true;
+            
+            const spinner = document.getElementById('loadingSpinner');
+            if (spinner) spinner.style.display = 'block';
+            
+            // Use fetch API instead of jQuery for better performance
+            fetch(`/api/chat/${currentChatId}/messages`)
+                .then(response => response.json())
+                .then(messages => {
+                    if (spinner) spinner.style.display = 'none';
+                    
+                    const container = document.getElementById('messageContainer');
+                    if (!container) return;
+                    
+                    // Use document fragment for batch DOM updates
+                    const fragment = document.createDocumentFragment();
+                    
+                    if (!messages || messages.length === 0) {
+                        const emptyMsg = document.createElement('div');
+                        emptyMsg.className = 'text-center text-muted my-5';
+                        emptyMsg.textContent = 'No messages yet. Start the conversation!';
+                        fragment.appendChild(emptyMsg);
+                    } else {
+                        messages.forEach(msg => {
+                            fragment.appendChild(createMessageElement(msg, false));
+                        });
+                    }
+                    
+                    // Batch DOM update
+                    container.innerHTML = '';
+                    container.appendChild(fragment);
+                    
+                    if (isInitialLoad) {
+                        scrollToBottom(false);
+                        isInitialLoad = false;
+                    }
+                    
+                    markMessagesAsRead();
+                })
+                .catch(error => {
+                    console.error('Failed to load messages:', error);
+                    if (spinner) {
+                        spinner.innerHTML = '<div class="alert alert-danger">Failed to load messages. Please refresh the page.</div>';
+                    }
+                })
+                .finally(() => {
+                    isLoadingMessages = false;
+                });
+        }
+
+        // Create message element with optimized DOM manipulation
+        function createMessageElement(msg, shouldAnimate = true) {
+            const isMine = msg.sender_id === currentUserId;
+            const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const row = document.createElement('div');
+            row.className = `message-row d-flex mb-3 ${isMine ? 'justify-content-end' : 'justify-content-start'}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `message-bubble ${isMine ? 'bg-primary text-white' : 'bg-light'}`;
+            
+            const content = document.createElement('div');
+            content.className = 'message-content';
+            content.textContent = msg.content;
+            
+            const timeElement = document.createElement('div');
+            timeElement.className = `message-time ${isMine ? 'text-white-50' : 'text-muted'}`;
+            timeElement.innerHTML = `${time} ${msg.read ? '<i class="fas fa-check-double ms-1"></i>' : '<i class="fas fa-check ms-1"></i>'}`;
+            
+            bubble.appendChild(content);
+            bubble.appendChild(timeElement);
+            row.appendChild(bubble);
+            
+            if (shouldAnimate) {
+                row.style.opacity = '0';
+                row.style.transform = 'translateY(10px)';
+                row.style.transition = 'opacity 0.3s ease-out, transform 0.3s ease-out';
+                
+                // Force reflow before animating
+                void row.offsetWidth;
+                
+                row.style.opacity = '1';
+                row.style.transform = 'translateY(0)';
+            }
+            
+            return row;
+        }
+
+        // Optimized send message function
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+            if (!content) return;
+
+            const sendBtn = document.getElementById('sendMessageBtn');
+            input.disabled = true;
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+            // Optimistic UI update
+            const tempId = 'temp-' + Date.now();
+            const tempMessage = {
+                _id: tempId,
+                sender_id: currentUserId,
+                content: content,
+                timestamp: new Date().toISOString(),
+                read: false
+            };
+            
+            const container = document.getElementById('messageContainer');
+            if (container) {
+                container.appendChild(createMessageElement(tempMessage));
+                scrollToBottom();
+            }
+
+            input.value = '';
+
+            // Use fetch API for better performance
+            fetch(`/api/chat/${currentChatId}/send`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrf_token
+                },
+                body: JSON.stringify({ message: content })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Remove temp message and add confirmed message
+                const tempElement = document.querySelector(`[data-temp-id="${tempId}"]`);
+                if (tempElement && container) {
+                    container.removeChild(tempElement);
+                    container.appendChild(createMessageElement(data.message));
+                    scrollToBottom();
+                }
+            })
+            .catch(error => {
+                console.error('Failed to send message:', error);
+                const failedMessage = document.querySelector(`[data-temp-id="${tempId}"]`);
+                if (failedMessage) {
+                    failedMessage.classList.add('failed-message');
+                }
+            })
+            .finally(() => {
+                input.disabled = false;
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+                input.focus();
+            });
+        }
+
+        // Mark messages as read with debounce
+        const markMessagesAsRead = debounce(function() {
+            fetch(`/api/chat/${currentChatId}/read`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrf_token
+                }
+            })
+            .then(() => {
+                const checkIcons = document.querySelectorAll('.fa-check');
+                checkIcons.forEach(icon => {
+                    icon.classList.remove('fa-check');
+                    icon.classList.add('fa-check-double');
+                });
+            })
+            .catch(error => console.error('Failed to mark as read:', error));
+        }, 300);
+
+        // Setup socket.io with connection management
+        function setupSocket() {
+            socket = io.connect("{{ request.url_root }}", {
+                transports: ['websocket'],
+                upgrade: false,
+                reconnection: true,
+                reconnectionDelay: 1000,
+                reconnectionAttempts: 5
+            });
+
+            socket.on('connect', () => {
+                socket.emit('join_user_room', { user_id: currentUserId });
+                socket.emit('join_chat', { chat_id: currentChatId });
+            });
+
+            socket.on('new_message', (msg) => {
+                if (msg.chat_id === currentChatId) {
+                    const container = document.getElementById('messageContainer');
+                    if (container) {
+                        container.appendChild(createMessageElement(msg, true));
+                        scrollToBottom();
+                    }
+                    if (msg.sender_id !== currentUserId) {
+                        markMessagesAsRead();
+                    }
+                }
+            });
+
+            socket.on('message_read', (data) => {
+                if (data.chat_id === currentChatId) {
+                    const checkIcons = document.querySelectorAll('.fa-check');
+                    checkIcons.forEach(icon => {
+                        icon.classList.remove('fa-check');
+                        icon.classList.add('fa-check-double');
+                    });
+                }
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Socket connection error:', error);
+            });
+        }
+
+        // Setup event handlers with throttling
+        function setupEventHandlers() {
+            // Use event delegation for better performance
+            document.addEventListener('click', function(e) {
+                if (e.target && e.target.id === 'sendMessageBtn') {
+                    sendMessage();
+                } else if (e.target && e.target.id === 'newChatBtn') {
+                    document.getElementById('newChatModal').style.display = 'block';
+                } else if (e.target && e.target.id === 'startChatBtn') {
+                    const select = document.getElementById('educatorSelect');
+                    if (select && select.value) {
+                        window.location.href = `/chat/${select.value}`;
+                    }
+                }
+            });
+
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.which === 13 && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Throttled load more messages
+            document.getElementById('loadMoreBtn').addEventListener('click', throttle(function() {
+                const firstMessage = document.querySelector('.message-row');
+                if (firstMessage) {
+                    const firstMessageId = firstMessage.dataset.messageId;
+                    if (firstMessageId) {
+                        fetch(`/api/chat/${currentChatId}/messages?before=${firstMessageId}`)
+                            .then(response => response.json())
+                            .then(messages => {
+                                if (messages.length > 0) {
+                                    const container = document.getElementById('messageContainer');
+                                    if (container) {
+                                        const scrollPos = container.scrollHeight;
+                                        const fragment = document.createDocumentFragment();
+                                        
+                                        messages.reverse().forEach(msg => {
+                                            fragment.appendChild(createMessageElement(msg, false));
+                                        });
+                                        
+                                        container.insertBefore(fragment, container.firstChild);
+                                        container.scrollTop = container.scrollHeight - scrollPos;
+                                    }
+                                } else {
+                                    const btn = document.getElementById('loadMoreBtn');
+                                    btn.disabled = true;
+                                    btn.textContent = 'No more messages';
+                                }
+                            });
+                    }
+                }
+            }, 1000));
+        }
+
+        // Helper functions
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                const context = this, args = arguments;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    func.apply(context, args);
+                }, wait);
+            };
+        }
+
+        function throttle(func, limit) {
+            let inThrottle;
+            return function() {
+                const args = arguments;
+                const context = this;
+                if (!inThrottle) {
+                    func.apply(context, args);
+                    inThrottle = true;
+                    setTimeout(() => inThrottle = false, limit);
+                }
+            };
+        }
+
+        // Initialize chat after DOM is ready
+        initializeChat();
+    });
+</script>
+
+<style>
+    .chat-body {
+        height: 500px;
+        overflow-y: auto;
+        padding: 15px;
+        background-color: #f8f9fa;
+        contain: strict; /* Improves performance by limiting reflow scope */
+        will-change: transform; /* Hint to browser for optimization */
+    }
+
+    .message-row {
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+    }
+
+    .message-bubble {
+        max-width: 70%;
+        padding: 10px 15px;
+        border-radius: 18px;
+        word-break: break-word; /* Better for long words */
+        position: relative;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        overflow-wrap: break-word; /* Ensure text wraps properly */
+    }
+
+    .message-bubble.bg-primary {
+        border-bottom-right-radius: 4px;
+    }
+
+    .message-bubble.bg-light {
+        border-bottom-left-radius: 4px;
+    }
+
+    .message-content {
+        margin-bottom: 5px;
+        line-height: 1.4;
+    }
+
+    .message-time {
+        font-size: 0.75rem;
+        text-align: right;
+        opacity: 0.8;
+    }
+
+    .failed-message {
+        opacity: 0.6;
+        position: relative;
+    }
+
+    .failed-message::after {
+        content: "Failed to send";
+        position: absolute;
+        bottom: -15px;
+        right: 0;
+        font-size: 0.7rem;
+        color: #dc3545;
+    }
+
+    /* Optimized scrollbar */
+    .chat-body::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .chat-body::-webkit-scrollbar-track {
+        background: rgba(241,241,241,0.5);
+    }
+
+    .chat-body::-webkit-scrollbar-thumb {
+        background: rgba(136,136,136,0.5);
+        border-radius: 3px;
+    }
+
+    .chat-body::-webkit-scrollbar-thumb:hover {
+        background: rgba(85,85,85,0.7);
+    }
+
+    /* Will-change optimizations */
+    .message-bubble, .message-row {
+        will-change: transform, opacity;
+    }
+
+    /* Image loading optimizations */
+    img {
+        will-change: transform;
+    }
+    .badge.rounded-pill {
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50% !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem; /* adjust as needed */
+}
+
+</style>
+{% endblock %}

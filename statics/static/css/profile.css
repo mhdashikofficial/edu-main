@@ -1,0 +1,326 @@
+/* Profile Page General Styles */
+.profile-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+/* Profile Card Styles */
+.profile-card {
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    border: none;
+}
+
+.profile-card .card-body {
+    padding: 2rem;
+}
+
+.profile-avatar {
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.profile-name {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.profile-role {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.profile-bio {
+    margin-top: 1rem;
+    color: #495057;
+    line-height: 1.6;
+}
+
+.social-links {
+    margin: 1rem 0;
+}
+
+.social-links a {
+    color: #6c757d;
+    transition: color 0.2s;
+    margin: 0 0.5rem;
+}
+.nav-link {
+    color: #495057;
+}
+.social-links a:hover {
+    color: #0d6efd;
+}
+
+.profile-stats {
+    padding: 1rem;
+    background-color: rgba(248, 249, 250, 0.5);
+}
+
+.profile-stats h5 {
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+}
+
+.profile-stats small {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+/* Details Card Styles */
+.details-card .card-header {
+    background-color: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 1rem 1.5rem;
+}
+
+.details-card h5 {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.details-card .card-body {
+    padding: 1.5rem;
+}
+
+.details-card h6 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.details-card p {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Connections Tab Styles */
+.connections-tab .nav-tabs {
+    border-bottom: none;
+}
+
+.connections-tab .nav-link {
+    border: none;
+    color: #1c65a5;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+}
+
+.connections-tab .nav-link.active {
+    color: #0d6efd;
+    background-color: transparent;
+    border-bottom: 2px solid #0d6efd;
+}
+
+.connections-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.connection-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.connection-item:last-child {
+    border-bottom: none;
+}
+
+.connection-avatar {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+}
+
+.connection-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.2rem;
+}
+
+.connection-role {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+/* Resources Grid Styles */
+.resource-card {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+    height: 100%;
+}
+
+.resource-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+}
+
+.resource-thumbnail {
+    height: 150px;
+    object-fit: cover;
+    background-color: #f8f9fa;
+}
+
+.resource-thumbnail-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    height: 150px;
+}
+
+.resource-card-body {
+    padding: 1.25rem;
+}
+
+.resource-title {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.resource-category {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0.75rem;
+}
+
+.resource-footer {
+    font-size: 0.75rem;
+    color: #6c757d;
+    background-color: transparent;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Badge Styles */
+.specialization-badge {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+/* Meeting Card Styles */
+.meeting-item {
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.meeting-item:hover {
+    background-color: #f8f9fa;
+}
+
+.meeting-title {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.meeting-time {
+    font-size: 0.85rem;
+}
+
+.meeting-description {
+    font-size: 0.9rem;
+    color: #495057;
+}
+
+/* Empty State Styles */
+.empty-state {
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    color: #adb5bd;
+    margin-bottom: 1rem;
+}
+
+.empty-state-title {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-text {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+
+
+/* Responsive Adjustments */
+@media (max-width: 767.98px) {
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .profile-card .card-body {
+        padding: 1.5rem;
+    }
+    
+    .resource-card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Animation for Toast Messages */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.toast {
+    animation: fadeIn 0.3s ease-out;
+    margin-bottom: 1rem;
+}
+
+/* Join Meeting Form Styles */
+#joinMeetingForm {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+#meetingLink {
+    font-family: monospace;
+    padding: 0.75rem 1rem;
+}
+
+/* Educator Card in Following Section */
+.educator-card {
+    transition: transform 0.2s;
+}
+
+.educator-card:hover {
+    transform: translateY(-3px);
+}
+
+.educator-avatar {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+}
+
+.educator-name {
+    font-weight: 500;
+    font-size: 1rem;
+}
+
+.educator-specialization {
+    font-size: 0.85rem;
+    color: #6c757d;
+}

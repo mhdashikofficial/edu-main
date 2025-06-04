@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}My Messages{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h3>All Conversations</h3>
+    <div class="list-group">
+        {% for conversation in conversations %}
+            <a href="{{ url_for('view_chat', chat_id=conversation.chat_id) }}" class="list-group-item list-group-item-action">
+                <div class="d-flex align-items-center">
+                    <img src="{{ get_user_avatar(conversation) }}" class="rounded-circle me-2" width="40" height="40">
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ conversation.name }}</strong>
+                            <small class="text-muted">{{ conversation.last_message.timestamp | datetimeformat }}</small>
+                        </div>
+                        <div class="text-truncate">
+                            {% if conversation.last_message.sender_id == current_user.id %}You: {% endif %}
+                            {{ conversation.last_message.content | truncate(50) }}
+                        </div>
+                    </div>
+                    {% if conversation.unread_count > 0 %}
+                        <span class="badge bg-primary rounded-pill ms-2">{{ conversation.unread_count }}</span>
+                    {% endif %}
+                </div>
+            </a>
+        {% else %}
+            <div class="text-center text-muted py-3">No conversations found</div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

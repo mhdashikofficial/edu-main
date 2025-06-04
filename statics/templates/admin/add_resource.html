@@ -1,0 +1,137 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Add New Resource{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Add New Resource</h1>
+</div>
+
+<form method="POST" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="mb-3">
+                {{ form.title.label(class="form-label") }}
+                {{ form.title(class="form-control") }}
+                {% if form.title.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.title.errors[0] }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                {{ form.description.label(class="form-label") }}
+                {{ form.description(class="form-control", rows=5) }}
+                {% if form.description.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.description.errors[0] }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        {{ form.category.label(class="form-label") }}
+                        {{ form.category(class="form-control") }}
+                        {% if form.category.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.category.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        {{ form.type.label(class="form-label") }}
+                        {{ form.type(class="form-select") }}
+                        {% if form.type.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.type.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3" id="price-field" style="display: none;">
+                {{ form.price.label(class="form-label") }}
+                {{ form.price(class="form-control") }}
+                {% if form.price.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.price.errors[0] }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3 form-check">
+                {{ form.is_active(class="form-check-input") }}
+                {{ form.is_active.label(class="form-check-label") }}
+                {% if form.is_active.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.is_active.errors[0] }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Files</h5>
+                    
+                    <div class="mb-3">
+                        {{ form.file.label(class="form-label") }}
+                        {{ form.file(class="form-control", required=true) }}
+                        {% if form.file.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.file.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        {{ form.thumbnail.label(class="form-label") }}
+                        {{ form.thumbnail(class="form-control") }}
+                        {% if form.thumbnail.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.thumbnail.errors[0] }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+        <a href="{{ url_for('admin_resources') }}" class="btn btn-secondary me-md-2">
+            Cancel
+        </a>
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show/hide price field based on resource type
+    const typeSelect = document.getElementById('type');
+    const priceField = document.getElementById('price-field');
+    
+    typeSelect.addEventListener('change', function() {
+        if (this.value === 'paid') {
+            priceField.style.display = 'block';
+        } else {
+            priceField.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,325 @@
+{% extends "admin/base_admin.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">User Details</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('admin_edit_user', user_id=user._id) }}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-edit"></i> Edit User
+            </a>
+            <a href="{{ url_for('admin_users') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Users
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <img src="{{ get_user_avatar(user) }}" class="rounded-circle mb-3" width="150" height="150">
+                <h4>{{ user.name }}</h4>
+                <p class="text-muted mb-1">@{{ user.username }}</p>
+                
+                <div class="d-flex justify-content-center mb-3">
+                    <span class="badge bg-{{ 'primary' if user.role == 'admin' else 'success' if user.role == 'educator' else 'info' }} me-1">
+                        {{ user.role|capitalize }}
+                    </span>
+                    {% if user.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                </div>
+                
+                <div class="d-flex justify-content-center">
+                    <a href="#" class="btn btn-outline-primary btn-sm me-1">
+                        <i class="fas fa-envelope"></i>
+                    </a>
+                    <a href="#" class="btn btn-outline-primary btn-sm me-1">
+                        <i class="fas fa-comment"></i>
+                    </a>
+                    {% if current_user.id != user._id|string %}
+                    <form method="POST" action="{{ url_for('admin_delete_user', user_id=user._id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to delete this user?')">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Contact Info</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2"><i class="fas fa-envelope me-2"></i> {{ user.email }}</li>
+                    {% if user.phone %}
+                    <li class="mb-2"><i class="fas fa-phone me-2"></i> {{ user.phone }}</li>
+                    {% endif %}
+                    {% if user.location %}
+                    <li class="mb-2"><i class="fas fa-map-marker-alt me-2"></i> {{ user.location }}</li>
+                    {% endif %}
+                    {% if user.website %}
+                    <li><i class="fas fa-globe me-2"></i> <a href="{{ user.website }}" target="_blank">{{ user.website }}</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        
+        {% if user.role == 'educator' %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Educator Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="small">Resources</h6>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ (user.free_resources_count / (user.resources_count or 1)) * 100 }}%" aria-valuenow="{{ user.free_resources_count }}" aria-valuemin="0" aria-valuemax="{{ user.resources_count or 1 }}">
+                            {{ user.free_resources_count }} Free
+                        </div>
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ (user.premium_resources_count / (user.resources_count or 1)) * 100 }}%" aria-valuenow="{{ user.premium_resources_count }}" aria-valuemin="0" aria-valuemax="{{ user.resources_count or 1 }}">
+                            {{ user.premium_resources_count }} Premium
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="small">Total Earnings</h6>
+                    <h4>${{ "%.2f"|format(earnings) }}</h4>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="small">Specialization</h6>
+                    <p>{{ user.specialization or 'Not specified' }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="userTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab">Profile</button>
+                    </li>
+                    {% if user.role == 'educator' %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="resources-tab" data-bs-toggle="tab" data-bs-target="#resources" type="button" role="tab">Resources</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="earnings-tab" data-bs-toggle="tab" data-bs-target="#earnings" type="button" role="tab">Earnings</button>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity" type="button" role="tab">Activity</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="userTabsContent">
+                    <div class="tab-pane fade show active" id="profile" role="tabpanel">
+                        <h5 class="mb-3">About</h5>
+                        <p>{{ user.bio or 'No bio provided' }}</p>
+                        
+                        <div class="row">
+                            {% if user.education %}
+                            <div class="col-md-6 mb-3">
+                                <h6 class="small">Education</h6>
+                                <p>{{ user.education }}</p>
+                            </div>
+                            {% endif %}
+                            
+                            {% if user.experience %}
+                            <div class="col-md-6 mb-3">
+                                <h6 class="small">Experience</h6>
+                                <p>{{ user.experience }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if user.social_links %}
+                        <h5 class="mb-3">Social Links</h5>
+                        <div class="d-flex">
+                            {% if user.social_links.twitter %}
+                            <a href="{{ user.social_links.twitter }}" class="btn btn-outline-secondary btn-sm me-2">
+                                <i class="fab fa-twitter"></i>
+                            </a>
+                            {% endif %}
+                            {% if user.social_links.linkedin %}
+                            <a href="{{ user.social_links.linkedin }}" class="btn btn-outline-secondary btn-sm me-2">
+                                <i class="fab fa-linkedin"></i>
+                            </a>
+                            {% endif %}
+                            {% if user.social_links.github %}
+                            <a href="{{ user.social_links.github }}" class="btn btn-outline-secondary btn-sm">
+                                <i class="fab fa-github"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if user.role == 'educator' %}
+                    <div class="tab-pane fade" id="resources" role="tabpanel">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Type</th>
+                                        <th>Price</th>
+                                        <th>Downloads</th>
+                                        <th>Uploaded</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for resource in resources %}
+                                    <tr>
+                                        <td><a href="{{ url_for('view_resource', resource_id=resource._id) }}">{{ resource.title|truncate(30) }}</a></td>
+                                        <td>{{ resource.type|capitalize }}</td>
+                                        <td>${{ "%.2f"|format(resource.price) if resource.type == 'paid' else 'Free' }}</td>
+                                        <td>{{ resource.downloads }}</td>
+                                        <td>{{ resource.upload_date|datetimeformat('%Y-%m-%d') }}</td>
+                                        <td>
+                                            {% if resource.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('admin_view_resource', resource_id=resource._id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="7" class="text-center">No resources found</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane fade" id="earnings" role="tabpanel">
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">Total Earnings</h6>
+                                        <h3 class="card-text text-success">${{ "%.2f"|format(earnings) }}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">Total Sales</h6>
+                                        <h3 class="card-text text-primary">{{ total_sales }}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-title">Avg. Sale</h6>
+                                        <h3 class="card-text text-info">${{ "%.2f"|format(earnings / (total_sales or 1)) }}</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h5 class="mb-3">Recent Transactions</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Resource</th>
+                                        <th>Buyer</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for payment in recent_payments %}
+                                    <tr>
+                                        <td>{{ payment.payment_date|datetimeformat('%Y-%m-%d') }}</td>
+                                        <td>{{ payment.resource.title|truncate(20) }}</td>
+                                        <td>{{ payment.buyer.username }}</td>
+                                        <td>${{ "%.2f"|format(payment.amount) }}</td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center">No transactions found</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <a href="{{ url_for('admin_educator_earnings', educator_id=user._id) }}" class="btn btn-sm btn-outline-primary">
+                                View All Earnings
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="tab-pane fade" id="activity" role="tabpanel">
+                        <h5 class="mb-3">Recent Activity</h5>
+                        <div class="list-group">
+                            {% for activity in recent_activity %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <small class="text-muted">{{ activity.timestamp|timesince }}</small>
+                                </div>
+                                <p class="mb-1">{{ activity.message }}</p>
+                            </div>
+                            {% else %}
+                            <div class="list-group-item">
+                                <p class="mb-1">No recent activity</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tabs
+        const tabElms = document.querySelectorAll('button[data-bs-toggle="tab"]');
+        tabElms.forEach(tabEl => {
+            tabEl.addEventListener('click', function(event) {
+                event.preventDefault();
+                const tab = new bootstrap.Tab(this);
+                tab.show();
+            });
+        });
+        
+        // If there's a hash in the URL, try to show that tab
+        if (window.location.hash) {
+            const tab = new bootstrap.Tab(document.querySelector(`button[data-bs-target="${window.location.hash}"]`));
+            tab.show();
+        }
+    });
+</script>
+{% endblock %}

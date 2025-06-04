@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h1 class="card-title">{{ resource.title }}</h1>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="me-3">
+                                    <a href="{{ url_for('profile', username=educator.username) }}">
+                                        <img src="{{ url_for('static', filename=educator.avatar) }}" 
+                                             class="rounded-circle" width="50" height="50" 
+                                             alt="{{ educator.username }}">
+                                    </a>
+                                </div>
+                                <div>
+                                    <a href="{{ url_for('profile', username=educator.username) }}" 
+                                       class="text-decoration-none">
+                                        <h5 class="mb-0">{{ educator.name or educator.username }}</h5>
+                                    </a>
+                                    <small class="text-muted">{{ educator.specialization or 'Educator' }}</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{{ 'success' if resource.type == 'free' else 'primary' }}">
+                                {{ resource.type|capitalize }}
+                            </span>
+                            {% if resource.type == 'paid' %}
+                                <h4 class="mt-2">₹{{ "%.2f"|format(resource.price) }}</h4>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Resource Thumbnail -->
+                    {% if resource.thumbnail %}
+                    <div class="mb-4 text-center">
+                        <img src="{{ url_for('static', filename=resource.thumbnail) }}" 
+                             class="img-fluid rounded" alt="{{ resource.title }}">
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Preview Content -->
+                    <div class="mb-4">
+                        <h4>Preview</h4>
+                        <div class="markdown-content">
+                            {{ preview_content|markdown }}
+                        </div>
+                    </div>
+                    
+                    {% if resource.type == 'paid' and not is_authenticated %}
+                        <div class="alert alert-warning">
+                            <h5><i class="fas fa-lock me-2"></i> Premium Content</h5>
+                            <p>This is a premium resource. Please <a href="{{ url_for('login') }}">login</a> or 
+                               <a href="{{ url_for('register') }}">register</a> to purchase and access the full content.</p>
+                        </div>
+                    {% elif resource.type == 'paid' and not has_purchased(current_user.id, resource._id) %}
+                        <div class="alert alert-warning">
+                            <h5><i class="fas fa-lock me-2"></i> Premium Content</h5>
+                            <p>This is a premium resource. Please purchase to access the full content.</p>
+                            <a href="{{ url_for('payment_page', resource_id=resource._id) }}" 
+                               class="btn btn-primary">
+                                <i class="fas fa-shopping-cart me-1"></i> Purchase Now
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Resource Details -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Resource Details</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Type:</strong> {{ resource.type|capitalize }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Category:</strong> {{ resource.category }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Uploaded:</strong> {{ resource.upload_date|timesince }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Downloads:</strong> {{ resource.downloads }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Rating:</strong> 
+                            {% for i in range(1,6) %}
+                                <i class="fas fa-star{{ ' text-warning' if i <= resource.rating|round else '-half-alt text-warning' if (resource.rating|round(0,'floor') < i <= resource.rating) else ' text-muted' }}"></i>
+                            {% endfor %}
+                            ({{ resource.rating_count }})
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Educator Info -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{{ url_for('static', filename=educator.avatar) }}" 
+                             class="rounded-circle me-3" width="64" height="64" 
+                             alt="{{ educator.username }}">
+                        <div>
+                            <h5 class="mb-0">{{ educator.name or educator.username }}</h5>
+                            <small class="text-muted">{{ educator.specialization or 'Educator' }}</small>
+                        </div>
+                    </div>
+                    <p class="card-text">{{ educator.bio|truncate(150) }}</p>
+                    <a href="{{ url_for('profile', username=educator.username) }}" 
+                       class="btn btn-outline-primary btn-sm">View Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

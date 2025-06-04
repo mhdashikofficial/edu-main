@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container chat-container py-4">
+    <div class="card chat-window">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <img src="{{ url_for('static', filename=educator.avatar) }}" 
+                     class="rounded-circle me-3" width="40" height="40">
+                <h5 class="mb-0">{{ educator.username }}</h5>
+            </div>
+            <div>
+                <a href="{{ url_for('profile', username=educator.username) }}" 
+                   class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-user me-1"></i> Profile
+                </a>
+            </div>
+        </div>
+        
+        <div class="card-body chat-messages" id="chat-messages">
+            {% for message in chat_history.messages %}
+            <div class="message {% if message.sender_id == current_user.id %}sent{% else %}received{% endif %}">
+                <div class="message-content">
+                    <div class="message-text">{{ message.message }}</div>
+                    <div class="message-time">
+                        {{ message.timestamp.strftime('%I:%M %p') }}
+                        {% if message.sender_id == current_user.id and message.read %}
+                        <i class="fas fa-check-double ms-1 text-primary"></i>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="card-footer">
+            <form id="chat-form" class="d-flex">
+                <input type="hidden" id="educator_id" value="{{ educator._id }}">
+                <input type="text" class="form-control" id="message-input" placeholder="Type your message..." autocomplete="off">
+                <button type="submit" class="btn btn-primary ms-2">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Socket.IO connection
+        const socket = io();
+        const chatId = "{{ chat_history._id }}";
+        
+        // Join the chat room
+        socket.emit('join_chat', {
+            chat_id: chatId,
+            user_id: "{{ current_user.id }}"
+        });
+        
+        // Handle sending messages
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            const educatorId = document.getElementById('educator_id').value;
+            
+            if (message) {
+                // Send message via Socket.IO
+                socket.emit('send_message', {
+                    recipient_id: educatorId,
+                    message: message,
+                    chat_id: chatId
+                });
+                
+                // Add message to UI immediately
+                const messagesContainer = document.getElementById('chat-messages');
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message sent';
+                messageElement.innerHTML = `
+                    <div class="message-content">
+                        <div class="message-text">${message}</div>
+                        <div class="message-time">
+                            ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            <i class="fas fa-check ms-1 text-muted"></i>
+                        </div>
+                    </div>
+                `;
+                messagesContainer.appendChild(messageElement);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Clear input
+                messageInput.value = '';
+            }
+        });
+        
+        // Listen for new messages
+        socket.on('new_message', function(data) {
+            if (data.sender_id === "{{ educator._id }}") {
+                const messagesContainer = document.getElementById('chat-messages');
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message received';
+                messageElement.innerHTML = `
+                    <div class="message-content">
+                        <div class="message-text">${data.message}</div>
+                        <div class="message-time">
+                            ${new Date(data.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </div>
+                    </div>
+                `;
+                messagesContainer.appendChild(messageElement);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Mark as read
+                socket.emit('mark_as_read', {
+                    chat_id: chatId,
+                    message_id: data.message_id
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

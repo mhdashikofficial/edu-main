@@ -1,0 +1,271 @@
+{% extends "base.html" %}
+
+{% block head %}
+<script src="https://meet.jit.si/external_api.js"></script>
+<style>
+    #jitsi-container {
+        width: 100%;
+        height: 70vh;
+    }
+    .meeting-controls {
+        margin-top: 20px;
+    }
+    .participant-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <div class="col-md-9">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4>{{ meeting.title }}</h4>
+                    <small>Hosted by: {{ host.username }}</small>
+                </div>
+                <div class="card-body p-0">
+                    <div id="jitsi-container"></div>
+                </div>
+            </div>
+            
+            {% if meeting.enable_chat %}
+            
+            {% endif %}
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Meeting Info</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Meeting ID:</strong> {{ meeting.meeting_id }}</p>
+                    <p><strong>Status:</strong> 
+                        <span class="badge bg-{{ 'success' if meeting.status == 'in_progress' else 'warning' }}">
+                            {{ meeting.status }}
+                        </span>
+                    </p>
+                    {% if meeting.scheduled_time %}
+                    <p><strong>Scheduled:</strong> {{ meeting.scheduled_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                    {% endif %}
+                    
+                    {% if role == 'host' %}
+                    <div class="d-grid gap-2 mt-3">
+                        <button class="btn btn-danger" id="end-meeting">End Meeting</button>
+                        <button class="btn btn-warning" id="lock-meeting">Lock Meeting</button>
+                        <button class="btn btn-info" id="mute-all">Mute All</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5>Participants ({{ meeting.participants|length + 1 }})</h5>
+                </div>
+                <div class="card-body participant-list">
+                    <ul class="list-group">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ host.username }} (Host)
+                            <span class="badge bg-primary rounded-pill">Host</span>
+                        </li>
+                        {% for participant_id in meeting.participants %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ participant_id }}
+                            {% if role == 'host' %}
+                            <button class="btn btn-sm btn-outline-danger remove-participant" 
+                                    data-user-id="{{ participant_id }}">
+                                Remove
+                            </button>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            
+            {% if meeting.enable_notes %}
+            
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize Jitsi Meet
+const domain = '{{ jitsi_domain }}';
+const options = {
+    roomName: '{{ jitsi_room }}',
+    width: '100%',
+    height: '100%',
+    parentNode: document.querySelector('#jitsi-container'),
+    userInfo: {
+        displayName: '{{ current_user.username }}',
+        email: '{{ current_user.data.email if current_user.data.email else "" }}'
+    },
+    configOverwrite: {
+        startWithAudioMuted: true,
+        startWithVideoMuted: false,
+        enableWelcomePage: false
+    },
+    interfaceConfigOverwrite: {
+        SHOW_JITSI_WATERMARK: false,
+        SHOW_WATERMARK_FOR_GUESTS: false
+    }
+};
+
+const api = new JitsiMeetExternalAPI(domain, options);
+
+// Socket.IO for meeting controls
+const socket = io();
+
+socket.on('connect', () => {
+    console.log('Connected to meeting socket');
+    
+    // Join meeting room
+    socket.emit('join_meeting_room', {
+        meeting_id: '{{ meeting.meeting_id }}',
+        user_id: '{{ current_user.id }}',
+        username: '{{ current_user.username }}',
+        role: '{{ role }}'
+    });
+});
+
+// Handle meeting events
+socket.on('meeting_ended', (data) => {
+    alert(data.message);
+    window.location.href = "{{ url_for('index') }}";
+});
+
+socket.on('meeting_locked', (data) => {
+    alert(data.message);
+});
+
+socket.on('participant_removed', (data) => {
+    if (data.user_id === '{{ current_user.id }}') {
+        alert(data.message);
+        window.location.href = "{{ url_for('index') }}";
+    }
+});
+
+socket.on('participant_muted', (data) => {
+    alert(data.message);
+    api.executeCommand('muteEveryone');
+});
+
+// Host controls
+document.getElementById('end-meeting')?.addEventListener('click', () => {
+    if (confirm('Are you sure you want to end this meeting for all participants?')) {
+        socket.emit('end_meeting', {
+            meeting_id: '{{ meeting.meeting_id }}',
+            csrf_token: '{{ csrf_token() }}'
+        });
+    }
+});
+
+document.getElementById('lock-meeting')?.addEventListener('click', () => {
+    socket.emit('lock_meeting', {
+        meeting_id: '{{ meeting.meeting_id }}',
+        locked: true,
+        csrf_token: '{{ csrf_token() }}'
+    });
+});
+
+document.getElementById('mute-all')?.addEventListener('click', () => {
+    socket.emit('mute_all', {
+        meeting_id: '{{ meeting.meeting_id }}',
+        csrf_token: '{{ csrf_token() }}'
+    });
+});
+
+// Remove participant buttons
+document.querySelectorAll('.remove-participant').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const userId = this.getAttribute('data-user-id');
+        if (confirm(`Remove participant ${userId} from meeting?`)) {
+            socket.emit('remove_participant', {
+                meeting_id: '{{ meeting.meeting_id }}',
+                user_id: userId,
+                csrf_token: '{{ csrf_token() }}'
+            });
+        }
+    });
+});
+
+{% if meeting.enable_chat %}
+const chatInput = document.getElementById('chat-input');
+const sendMessageBtn = document.getElementById('send-message');
+const chatMessages = document.getElementById('chat-messages');
+
+// Ensure elements exist before adding event listeners
+if (chatInput && sendMessageBtn && chatMessages && typeof socket !== 'undefined') {
+    sendMessageBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault(); // prevent newline in input
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        const message = chatInput.value.trim();
+        if (message) {
+            socket.emit('meeting_message', {
+                meeting_id: '{{ meeting.meeting_id }}',
+                message: message,
+                csrf_token: '{{ csrf_token() }}'
+            });
+            chatInput.value = '';
+        }
+    }
+
+    socket.on('meeting_message', (data) => {
+        // Validate data properties before using
+        if (data.username && data.message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.innerHTML = `<strong>${escapeHtml(data.username)}:</strong> ${escapeHtml(data.message)}`;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    });
+}
+
+// Simple helper function to prevent XSS by escaping HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+{% endif %}
+
+
+{% if meeting.enable_notes %}
+const notesTextarea = document.getElementById('meeting-notes');
+
+if (notesTextarea && typeof socket !== 'undefined') {
+    // Load existing notes
+    socket.emit('get_meeting_notes', {
+        meeting_id: '{{ meeting.meeting_id }}'
+    });
+
+    socket.on('meeting_notes', (data) => {
+        if (data.notes !== undefined) {
+            notesTextarea.value = data.notes;
+        }
+    });
+
+    notesTextarea.addEventListener('input', () => {
+        socket.emit('update_meeting_notes', {
+            meeting_id: '{{ meeting.meeting_id }}',
+            notes: notesTextarea.value,
+            csrf_token: '{{ csrf_token() }}'
+        });
+    });
+}
+{% endif %}
+
+</script>
+{% endblock %}
