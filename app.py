@@ -21,6 +21,8 @@ import time
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 from collections import defaultdict
+from wtforms.validators import DataRequired, Email, EqualTo, Length
+
 
 # ===== Load Environment Variables Early =====
 from dotenv import load_dotenv
