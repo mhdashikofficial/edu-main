@@ -1,6 +1,4 @@
-# ===== Eventlet Patch Must Be First =====
-import eventlet
-eventlet.monkey_patch()
+
 
 # ===== Standard Library Imports =====
 import os
@@ -160,7 +158,6 @@ csrf = CSRFProtect(app)
 socketio = SocketIO(
     app,
     cors_allowed_origins="*",
-    async_mode='eventlet',
     manage_session=False
 )
 
