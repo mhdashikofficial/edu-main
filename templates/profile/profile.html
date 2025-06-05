@@ -1,5 +1,18 @@
 {% extends "base.html" %}
 
+{% block head %}
+<style>
+    #joinMeetingForm {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    #meetingLink {
+        font-family: monospace;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row">
@@ -208,103 +221,195 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- User-specific sections -->
-            {% if current_user.is_authenticated and current_user.id == user._id|string %}
-                {% if user.role == 'student' %}
-                    <!-- Purchased Resources -->
-                    <div class="card mt-3">
-                        <div class="card-header">
-                            <h5 class="mb-0">My Purchased Resources</h5>
-                        </div>
-                        <div class="card-body">
-                            {% if purchased_resources %}
-                                <div class="list-group">
-                                    {% for resource in purchased_resources %}
-                                    <a href="{{ url_for('view_resource', resource_id=resource._id) }}" 
-                                       class="list-group-item list-group-item-action">
-                                        <div class="d-flex justify-content-between">
-                                            <span>{{ resource.title }}</span>
-                                            <small class="text-muted">{{ resource.upload_date|timesince }}</small>
-                                        </div>
-                                        <small class="text-muted">{{ resource.category }}</small>
-                                    </a>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="text-center py-2">
-                                    <i class="fas fa-book fa-2x text-muted mb-2"></i>
-                                    <p class="text-muted">No purchased resources yet</p>
-                                    <a href="{{ url_for('browse_resources') }}" class="btn btn-sm btn-primary">
-                                        Browse Resources
-                                    </a>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                {% endif %}
-
-                <!-- Messages Section -->
-                <div class="card mt-3">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">My Messages</h5>
-                            {% if unread_messages > 0 %}
-                                <span class="badge bg-danger rounded-pill">{{ unread_messages }}</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        {% if chat_conversations %}
-                            <div class="list-group list-group-flush">
-                                {% for chat in chat_conversations %}
-                                <a href="{{ url_for('view_chat', chat_id=chat.chat_id) }}" 
-                                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-start 
-                                          {% if chat.unread_count > 0 %}bg-light{% endif %}">
-                                    <div class="ms-2 me-auto">
-                                        <div class="fw-bold">
-                                            {{ chat.name }}
-                                            {% if chat.unread_count > 0 %}
-                                                <span class="badge bg-primary rounded-pill">{{ chat.unread_count }}</span>
-                                            {% endif %}
-                                        </div>
-                                        <small class="text-muted">
-                                            {% if chat.last_message.sender_id == current_user.id %}
-                                                You: {{ chat.last_message.content|truncate(30) }}
-                                            {% else %}
-                                                {{ chat.last_message.content|truncate(30) }}
-                                            {% endif %}
-                                        </small>
-                                    </div>
-                                    <small class="text-muted">{{ chat.updated_at|timesince }}</small>
-                                </a>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="p-3 text-center">
-                                <i class="fas fa-comments fa-2x text-muted mb-2"></i>
-                                <p class="text-muted">No messages yet</p>
-                                {% if user.role == 'student' %}
-                                    <a href="{{ url_for('browse_educators') }}" class="btn btn-sm btn-primary">
-                                        Find Educators
-                                    </a>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            {% endif %}
         </div>
 
         <!-- Main Content Section -->
         <div class="col-md-8">
             {% if user.role == 'educator' %}
+                <!-- Educator Meetings Section -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        
+                        
+                    </div>
+                    <div class="card-body">
+                        {% if educator_meetings %}
+                            
+                            
+                            <div class="tab-content" id="meetingsTabContent">
+                                <div class="tab-pane fade show active" id="upcoming-meetings" role="tabpanel">
+                                    {% if educator_meetings.upcoming %}
+                                        <div class="list-group">
+                                            {% for meeting in educator_meetings.upcoming %}
+                                            <div class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h5 class="mb-1">{{ meeting.title }}</h5>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-calendar-alt"></i> 
+                                                            {{ meeting.scheduled_time.strftime('%B %d, %Y at %I:%M %p') }}
+                                                        </small>
+                                                        <div class="mt-2">
+                                                            <span class="badge bg-info">
+                                                                <i class="fas fa-clock"></i> 
+                                                                {{ meeting.duration }} minutes
+                                                            </span>
+                                                            <span class="badge bg-secondary ms-1">
+                                                                <i class="fas fa-users"></i> 
+                                                                {{ meeting.participants|length }} participants
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="btn-group">
+                                                        {% if is_own_profile %}
+                                                            <a href="{{ url_for('join_meeting', meeting_id=meeting.meeting_id) }}" 
+                                                               class="btn btn-sm btn-primary">
+                                                                <i class="fas fa-video"></i> Join
+                                                            </a>
+                                                            <button class="btn btn-sm btn-outline-primary copy-meeting-link" 
+                                                                    data-meeting-id="{{ meeting.meeting_id }}">
+                                                                <i class="fas fa-copy"></i> Copy Link
+                                                            </button>
+                                                            <button class="btn btn-sm btn-outline-danger cancel-meeting" 
+                                                                    data-meeting-id="{{ meeting.meeting_id }}">
+                                                                <i class="fas fa-times"></i> Cancel
+                                                            </button>
+                                                        {% else %}
+                                                            {% if meeting.is_participant %}
+                                                                <a href="{{ url_for('join_meeting', meeting_id=meeting.meeting_id) }}" 
+                                                                   class="btn btn-sm btn-primary">
+                                                                    <i class="fas fa-video"></i> Join
+                                                                </a>
+                                                            {% else %}
+                                                                <button class="btn btn-sm btn-primary request-join-meeting" 
+                                                                        data-meeting-id="{{ meeting.meeting_id }}"
+                                                                        data-meeting-title="{{ meeting.title }}">
+                                                                    <i class="fas fa-hand-paper"></i> Request to Join
+                                                                </button>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                {% if meeting.description %}
+                                                    <div class="mt-2">
+                                                        <p class="mb-0">{{ meeting.description }}</p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="tab-pane fade" id="inprogress-meetings" role="tabpanel">
+                                    {% if educator_meetings.in_progress %}
+                                        <div class="list-group">
+                                            {% for meeting in educator_meetings.in_progress %}
+                                            <div class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h5 class="mb-1">{{ meeting.title }}</h5>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-calendar-alt"></i> 
+                                                            Started {{ meeting.started_at.strftime('%B %d, %Y at %I:%M %p') }}
+                                                        </small>
+                                                        <div class="mt-2">
+                                                            <span class="badge bg-success">
+                                                                <i class="fas fa-users"></i> 
+                                                                {{ meeting.participants|length }} participants
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <a href="{{ url_for('join_meeting', meeting_id=meeting.meeting_id) }}" 
+                                                           class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-video"></i> Join
+                                                        </a>
+                                                        {% if is_own_profile %}
+                                                            <button class="btn btn-sm btn-outline-danger end-meeting" 
+                                                                    data-meeting-id="{{ meeting.meeting_id }}">
+                                                                <i class="fas fa-stop"></i> End
+                                                            </button>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                                            <h5>No meetings in progress</h5>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="tab-pane fade" id="past-meetings" role="tabpanel">
+                                    {% if educator_meetings.past %}
+                                        <div class="list-group">
+                                            {% for meeting in educator_meetings.past %}
+                                            <div class="list-group-item">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h5 class="mb-1">{{ meeting.title }}</h5>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-calendar-alt"></i> 
+                                                            {{ meeting.scheduled_time.strftime('%B %d, %Y at %I:%M %p') }}
+                                                        </small>
+                                                        <div class="mt-2">
+                                                            <span class="badge bg-secondary">
+                                                                <i class="fas fa-clock"></i> 
+                                                                {{ meeting.duration }} minutes
+                                                            </span>
+                                                            <span class="badge bg-info ms-1">
+                                                                <i class="fas fa-users"></i> 
+                                                                {{ meeting.participants|length }} attended
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {% if is_own_profile %}
+                                                        <button class="btn btn-sm btn-outline-primary copy-meeting-link" 
+                                                                data-meeting-id="{{ meeting.meeting_id }}">
+                                                            <i class="fas fa-copy"></i> Copy Link
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="text-center py-4">
+                                            <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                                            <h5>No past meetings</h5>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                                <h5>No meetings scheduled yet</h5>
+                                {% if is_own_profile %}
+                                    <p class="text-muted">Create your first meeting with students</p>
+                                    <a href="{{ url_for('create_meeting') }}" class="btn btn-primary">
+                                        <i class="fas fa-plus"></i> Create Meeting
+                                    </a>
+                                {% else %}
+                                    <p class="text-muted">This educator has no scheduled meetings</p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
                 <!-- Educator Resources -->
                 <div class="card mb-4">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h4 class="mb-0">My Resources</h4>
                         <div>
-                            {% if current_user.is_authenticated and (current_user.id == user._id|string or current_user.role == 'admin') %}
+                            {% if is_own_profile %}
                                 <a href="{{ url_for('upload_resource') }}" class="btn btn-sm btn-primary">
                                     <i class="fas fa-plus"></i> Upload
                                 </a>
@@ -321,34 +426,36 @@
                                 {% for resource in resources %}
                                 <div class="col">
                                     <div class="card h-100">
-                                        <div class="card-img-top-container">
-                                            <img src="{{ url_for('static', filename=resource.thumbnail) }}" 
-                                                 class="card-img-top" 
-                                                 onerror="this.src='{{ url_for('static', filename='images/default-resource.png') }}'">
-                                            {% if resource.type == 'paid' %}
-                                                <span class="badge bg-warning position-absolute top-0 end-0 m-2">
-                                                    <i class="fas fa-dollar-sign"></i> {{ resource.price }}
-                                                </span>
-                                            {% else %}
-                                                <span class="badge bg-success position-absolute top-0 end-0 m-2">
-                                                    Free
-                                                </span>
-                                            {% endif %}
+                                        {% if resource.thumbnail %}
+                                        <img src="{{ url_for('static', filename=resource.thumbnail) }}" 
+                                             class="card-img-top" 
+                                             onerror="this.src='{{ url_for('static', filename='images/default-resource.png') }}'">
+                                        {% else %}
+                                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                            <i class="fas fa-file-alt fa-3x text-muted"></i>
                                         </div>
+                                        {% endif %}
                                         <div class="card-body">
                                             <h5 class="card-title">{{ resource.title }}</h5>
                                             <p class="card-text text-muted">{{ resource.category }}</p>
                                             <div class="d-flex justify-content-between align-items-center">
-                                                <span class="badge bg-info">
-                                                    <i class="fas fa-download"></i> {{ resource.downloads }}
-                                                </span>
+                                                <div>
+                                                    <span class="badge bg-{% if resource.type == 'paid' %}warning{% else %}success{% endif %}">
+                                                        {{ resource.type|capitalize }}
+                                                    </span>
+                                                    {% if resource.type == 'paid' %}
+                                                    <span class="badge bg-info ms-1">
+                                                        ₹{{ resource.price }}
+                                                    </span>
+                                                    {% endif %}
+                                                </div>
                                                 <div class="btn-group">
                                                     <a href="{{ url_for('view_resource', resource_id=resource._id) }}" 
                                                        class="btn btn-sm btn-outline-primary">
                                                        View
                                                     </a>
-                                                    {% if current_user.is_authenticated and (current_user.id == user._id|string or current_user.role == 'admin') %}
-                                                        <a href="{{ url_for('admin_edit_resource', resource_id=resource._id) }}" 
+                                                    {% if is_own_profile %}
+                                                        <a href="{{ url_for('edit_resource', resource_id=resource._id) }}" 
                                                            class="btn btn-sm btn-outline-secondary">
                                                            Edit
                                                         </a>
@@ -373,224 +480,128 @@
                             <div class="text-center py-4">
                                 <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
                                 <h5>No resources uploaded yet</h5>
-                                <p class="text-muted">Upload your first resource to share with students</p>
-                                {% if current_user.is_authenticated and (current_user.id == user._id|string or current_user.role == 'admin') %}
+                                {% if is_own_profile %}
+                                    <p class="text-muted">Upload your first resource to share with students</p>
                                     <a href="{{ url_for('upload_resource') }}" class="btn btn-primary mt-2">
                                         <i class="fas fa-plus"></i> Upload Resource
                                     </a>
+                                {% else %}
+                                    <p class="text-muted">This educator hasn't uploaded any resources yet</p>
                                 {% endif %}
                             </div>
                         {% endif %}
                     </div>
                 </div>
 
-                <!-- Educator Messages -->
+                <!-- Educator Earnings -->
+
+
+           
+                {% else %}
+
+                <!-- Add this in the Main Content Section (col-md-8) at the top -->
                 <div class="card mb-4">
                     <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h4 class="mb-0">Student Messages</h4>
-                            {% if unread_messages > 0 %}
-                                <span class="badge bg-danger rounded-pill">{{ unread_messages }}</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        {% if chat_conversations %}
-                            <div class="list-group list-group-flush">
-                                {% for chat in chat_conversations %}
-                                <a href="{{ url_for('view_chat', chat_id=chat.chat_id) }}" 
-                                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-start 
-                                          {% if chat.unread_count > 0 %}bg-light{% endif %}">
-                                    <div class="ms-2 me-auto">
-                                        <div class="fw-bold">
-                                            {{ chat.name }}
-                                            {% if chat.unread_count > 0 %}
-                                                <span class="badge bg-primary rounded-pill">{{ chat.unread_count }}</span>
-                                            {% endif %}
-                                        </div>
-                                        <small class="text-muted">
-                                            {% if chat.last_message.sender_id == current_user.id %}
-                                                You: {{ chat.last_message.content|truncate(30) }}
-                                            {% else %}
-                                                {{ chat.name.split(' ')[0] }}: {{ chat.last_message.content|truncate(30) }}
-                                            {% endif %}
-                                        </small>
-                                    </div>
-                                    <small class="text-muted">{{ chat.updated_at|timesince }}</small>
-                                </a>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div class="p-3 text-center">
-                                <i class="fas fa-comments fa-2x text-muted mb-2"></i>
-                                <p class="text-muted">No messages from students yet</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Educator Meetings -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">My Meetings</h4>
-                        {% if current_user.is_authenticated and (current_user.id == user._id|string or current_user.role == 'admin') %}
-                            <a href="{{ url_for('create_meeting') }}" class="btn btn-sm btn-primary">
-                                <i class="fas fa-plus"></i> Schedule
-                            </a>
-                        {% endif %}
+                        <h4 class="mb-0">Join a Meeting</h4>
                     </div>
                     <div class="card-body">
-                        {% if meetings %}
-                            <div class="list-group">
-                                {% for meeting in meetings %}
-                                <div class="list-group-item">
-                                    <div class="d-flex w-100 justify-content-between">
-                                        <h5 class="mb-1">{{ meeting.title }}</h5>
-                                        <span class="badge bg-{% if meeting.status == 'completed' %}success{% elif meeting.status == 'cancelled' %}danger{% else %}primary{% endif %}">
-                                            {{ meeting.status|capitalize }}
-                                        </span>
-                                    </div>
-                                    <div class="d-flex w-100 justify-content-between mb-2">
-                                        <div>
-                                            <small>
-                                                <i class="fas fa-calendar-alt"></i> 
-                                                {{ meeting.scheduled_time.strftime('%b %d, %Y %I:%M %p') }}
-                                            </small>
-                                            <small class="ms-2">
-                                                <i class="fas fa-clock"></i> {{ meeting.duration }} mins
+                        <form id="joinMeetingForm">
+                            <div class="mb-3">
+                                <label for="meetingLink" class="form-label">Meeting Link or Code</label>
+                                <input type="text" class="form-control" id="meetingLink" 
+                                    placeholder="Paste meeting link or enter meeting code (e.g., EDU-1234)">
+                                <div class="form-text">You can paste the full meeting URL or just the meeting code</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-video"></i> Join Meeting
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                  
+                <!-- Saved Resources (only shown on own profile) -->
+                {% if is_own_profile %}
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Saved Resources</h4>
+                        <a href="{{ url_for('library') }}" class="btn btn-sm btn-outline-secondary">
+                            View All
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if saved_resources %}
+                            <div class="row row-cols-1 row-cols-md-2 g-4">
+                                {% for saved in saved_resources %}
+                                <div class="col">
+                                    <div class="card h-100">
+                                        {% if saved.resource.thumbnail %}
+                                        <img src="{{ url_for('static', filename=saved.resource.thumbnail) }}" 
+                                             class="card-img-top" 
+                                             onerror="this.src='{{ url_for('static', filename='images/default-resource.png') }}'">
+                                        {% else %}
+                                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 150px;">
+                                            <i class="fas fa-file-alt fa-3x text-muted"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ saved.resource.title }}</h5>
+                                            <p class="card-text text-muted">{{ saved.resource.category }}</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <span class="badge bg-{% if saved.resource.type == 'paid' %}warning{% else %}success{% endif %}">
+                                                        {{ saved.resource.type|capitalize }}
+                                                    </span>
+                                                    {% if saved.resource.type == 'paid' %}
+                                                    <span class="badge bg-info ms-1">
+                                                        ₹{{ saved.resource.price }}
+                                                    </span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="btn-group">
+                                                    <a href="{{ url_for('view_resource', resource_id=saved.resource._id) }}" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                       View
+                                                    </a>
+                                                    <button class="btn btn-sm btn-outline-danger unsave-resource" 
+                                                            data-resource-id="{{ saved.resource._id }}">
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer bg-transparent">
+                                            <small class="text-muted">
+                                                Saved {{ saved.saved_at|timesince }}
                                             </small>
                                         </div>
-                                        <small>
-                                            <i class="fas fa-users"></i> {{ attendance_counts.get(meeting._id|string, 0) }} attending
-                                        </small>
-                                    </div>
-                                    <div class="d-flex">
-                                        <a href="{{ url_for('view_meeting', meeting_id=meeting._id) }}" 
-                                           class="btn btn-sm btn-outline-primary me-2">
-                                            View
-                                        </a>
-                                        {% if meeting.status == 'scheduled' %}
-                                            <a href="{{ url_for('generate_invite_link', meeting_id=meeting._id) }}" 
-                                               class="btn btn-sm btn-outline-secondary me-2">
-                                                Invite
-                                            </a>
-                                            {% if current_user.is_authenticated and (current_user.id == user._id|string or current_user.role == 'admin') %}
-                                                <button class="btn btn-sm btn-outline-danger cancel-meeting" 
-                                                        data-meeting-id="{{ meeting._id }}">
-                                                    Cancel
-                                                </button>
-                                            {% endif %}
-                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}
                             </div>
                         {% else %}
                             <div class="text-center py-4">
-                                <i class="fas fa-calendar-alt fa-3x text-muted mb-3"></i>
-                                <h5>No upcoming meetings</h5>
-                                <p class="text-muted">Schedule a meeting to connect with your students</p>
-                                {% if current_user.is_authenticated and (current_user.id == user._id|string or current_user.role == 'admin') %}
-                                    <a href="{{ url_for('create_meeting') }}" class="btn btn-primary mt-2">
-                                        <i class="fas fa-plus"></i> Schedule Meeting
-                                    </a>
-                                {% endif %}
+                                <i class="fas fa-bookmark fa-3x text-muted mb-3"></i>
+                                <h5>No saved resources yet</h5>
+                                <p class="text-muted">Save resources to access them later</p>
+                                <a href="{{ url_for('browse_resources') }}" class="btn btn-primary">
+                                    Browse Resources
+                                </a>
                             </div>
                         {% endif %}
                     </div>
                 </div>
+                {% endif %}
 
-            {% else %}
-                <!-- Student Profile Main Content -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4 class="mb-0">Recent Activity</h4>
-                    </div>
-                    <div class="card-body">
-                        <!-- Notifications -->
-                        <div class="mb-4">
-                            <h5><i class="fas fa-bell"></i> Notifications</h5>
-                            <div id="notifications-list">
-                                {% if notifications %}
-                                    <div class="list-group">
-                                        {% for notification in notifications %}
-                                        <a href="{{ notification.url or '#' }}" 
-                                           class="list-group-item list-group-item-action 
-                                                  {% if not notification.read %}bg-light{% endif %}">
-                                            <div class="d-flex w-100 justify-content-between">
-                                                <p class="mb-1">{{ notification.message }}</p>
-                                                <small>{{ notification.created_at|timesince }}</small>
-                                            </div>
-                                        </a>
-                                        {% endfor %}
-                                    </div>
-                                {% else %}
-                                    <div class="text-center py-3">
-                                        <i class="fas fa-bell-slash fa-2x text-muted mb-2"></i>
-                                        <p class="text-muted">No new notifications</p>
-                                    </div>
-                                {% endif %}
-                            </div>
+                <!-- Favorite Educators (only shown on own profile) -->
+                {% if is_own_profile and following_educators %}
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">Following Educators</h4>
+                            <a href="{{ url_for('browse_educators') }}" class="btn btn-sm btn-outline-secondary">
+                                Find More
+                            </a>
                         </div>
-                        
-                        <!-- Recently Viewed Resources -->
-                        <div>
-                            <h5><i class="fas fa-history"></i> Recently Viewed</h5>
-                            {% if recent_resources %}
-                                <div class="row row-cols-1 row-cols-md-2 g-4">
-                                    {% for resource in recent_resources %}
-                                    <div class="col">
-                                        <div class="card h-100">
-                                            <div class="card-img-top-container">
-                                                <img src="{{ url_for('static', filename=resource.thumbnail) }}" 
-                                                     class="card-img-top" 
-                                                     onerror="this.src='{{ url_for('static', filename='images/default-resource.png') }}'">
-                                            </div>
-                                            <div class="card-body">
-                                                <h5 class="card-title">{{ resource.title }}</h5>
-                                                <p class="card-text text-muted">{{ resource.category }}</p>
-                                                <div class="d-flex justify-content-between align-items-center">
-                                                    <span class="badge bg-{% if resource.type == 'paid' %}warning{% else %}success{% endif %}">
-                                                        {{ resource.type|capitalize }}
-                                                    </span>
-                                                    <a href="{{ url_for('view_resource', resource_id=resource._id) }}" 
-                                                       class="btn btn-sm btn-outline-primary">
-                                                       View
-                                                    </a>
-                                                </div>
-                                            </div>
-                                            <div class="card-footer bg-transparent">
-                                                <small class="text-muted">
-                                                    Viewed {{ resource.last_viewed|timesince }}
-                                                </small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <div class="text-center py-3">
-                                    <i class="fas fa-book fa-2x text-muted mb-2"></i>
-                                    <p class="text-muted">No recently viewed resources</p>
-                                    <a href="{{ url_for('browse_resources') }}" class="btn btn-sm btn-primary">
-                                        Browse Resources
-                                    </a>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Favorite Educators -->
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h4 class="mb-0">My Favorite Educators</h4>
-                        <a href="{{ url_for('browse_educators') }}" class="btn btn-sm btn-outline-secondary">
-                            Find More
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        {% if following_educators %}
+                        <div class="card-body">
                             <div class="row row-cols-1 row-cols-md-2 g-4">
                                 {% for educator in following_educators %}
                                 <div class="col">
@@ -608,12 +619,12 @@
                                                        class="btn btn-sm btn-outline-primary">
                                                        Profile
                                                     </a>
-                                                    <a href="{{ url_for('chat', educator_id=educator.id) }}" 
+                                                    <a href="{{ url_for('chat', educator_id=educator._id) }}" 
                                                        class="btn btn-sm btn-primary">
                                                        Message
                                                     </a>
                                                     <button class="btn btn-sm btn-outline-danger unfollow-educator" 
-                                                            data-educator-id="{{ educator.id }}">
+                                                            data-educator-id="{{ educator._id }}">
                                                         Unfollow
                                                     </button>
                                                 </div>
@@ -635,18 +646,9 @@
                                 </div>
                                 {% endfor %}
                             </div>
-                        {% else %}
-                            <div class="text-center py-4">
-                                <i class="fas fa-user-graduate fa-3x text-muted mb-3"></i>
-                                <h5>No favorite educators yet</h5>
-                                <p class="text-muted">Follow educators to see them here</p>
-                                <a href="{{ url_for('browse_educators') }}" class="btn btn-primary mt-2">
-                                    Browse Educators
-                                </a>
-                            </div>
-                        {% endif %}
+                        </div>
                     </div>
-                </div>
+                {% endif %}
             {% endif %}
         </div>
     </div>
@@ -685,6 +687,56 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger" id="confirm-cancel-meeting">Cancel Meeting</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- End Meeting Modal -->
+<div class="modal fade" id="endMeetingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm End Meeting</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to end this meeting? All participants will be disconnected.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-end-meeting">End Meeting</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Request to Join Meeting Modal -->
+<div class="modal fade" id="requestJoinModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request to Join Meeting</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="meeting-title" class="form-label">Meeting</label>
+                    <input type="text" class="form-control" id="meeting-title" readonly>
+                </div>
+                <div class="mb-3">
+                    <label for="meeting-link" class="form-label">Meeting Link (if provided by educator)</label>
+                    <input type="text" class="form-control" id="meeting-link" placeholder="Paste meeting link here">
+                </div>
+                <div class="mb-3">
+                    <label for="join-message" class="form-label">Message to Educator (optional)</label>
+                    <textarea class="form-control" id="join-message" rows="3" 
+                              placeholder="Tell the educator why you want to join this meeting"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-request-join">Send Request</button>
             </div>
         </div>
     </div>
@@ -764,7 +816,7 @@ $(document).ready(function() {
         if (!resourceToDelete) return;
         
         $.ajax({
-            url: `/admin/resource/${resourceToDelete}/delete`,
+            url: `/resource/${resourceToDelete}/delete`,
             method: 'POST',
             headers: {
                 'X-CSRFToken': '{{ csrf_token() }}'
@@ -809,70 +861,137 @@ $(document).ready(function() {
         });
     });
     
-    // Mark notifications as read when clicked
-    $('.list-group-item-action').click(function() {
-        const notificationId = $(this).data('notification-id');
-        if (notificationId) {
-            $.ajax({
-                url: `/notifications/${notificationId}/read`,
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': '{{ csrf_token() }}'
-                }
-            });
-        }
+    // End Meeting
+    let meetingToEnd = null;
+    $('.end-meeting').click(function() {
+        meetingToEnd = $(this).data('meeting-id');
+        $('#endMeetingModal').modal('show');
     });
     
-    // Socket.IO for real-time notifications
-    socket.on('new_message', function(data) {
-        // Update unread count in the header
-        const unreadBadge = $('#unread-messages-badge');
-        if (unreadBadge.length) {
-            const currentCount = parseInt(unreadBadge.text()) || 0;
-            unreadBadge.text(currentCount + 1).show();
-        }
+    $('#confirm-end-meeting').click(function() {
+        if (!meetingToEnd) return;
         
-        // Update the specific conversation if visible
-        const conversationLink = $(`a[href*="chat/${data.chat_id}"]`);
-        if (conversationLink.length) {
-            // Update unread count
-            const unreadSpan = conversationLink.find('.badge');
-            if (unreadSpan.length) {
-                const currentCount = parseInt(unreadSpan.text()) || 0;
-                unreadSpan.text(currentCount + 1);
-            } else {
-                conversationLink.find('.fw-bold').append(
-                    `<span class="badge bg-primary rounded-pill">1</span>`
-                );
+        $.ajax({
+            url: `/meeting/${meetingToEnd}/end`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                $('#endMeetingModal').modal('hide');
+                showToast('Meeting ended successfully', 'success');
+                // Reload after 1 second
+                setTimeout(() => location.reload(), 1000);
+            },
+            error: function() {
+                showToast('Error ending meeting', 'danger');
             }
-            
-            // Update last message preview
-            conversationLink.find('.text-muted').text(
-                data.sender_id === '{{ current_user.id }}' ? 
-                `You: ${data.content.substring(0, 30)}` : 
-                `${data.sender_name}: ${data.content.substring(0, 30)}`
-            );
-            
-            // Highlight the conversation
-            conversationLink.addClass('bg-light');
-        }
+        });
+    });
+    
+    // Copy Meeting Link
+    $('.copy-meeting-link').click(function() {
+        const meetingId = $(this).data('meeting-id');
+        const meetingUrl = window.location.origin + '/meeting/' + meetingId;
         
-        // Show desktop notification if permitted
-        if (Notification.permission === "granted") {
-            new Notification("New Message", {
-                body: `${data.sender_name}: ${data.content}`,
-                icon: '{{ url_for("static", filename="images/logo.png") }}'
-            });
-        } else if (Notification.permission !== "denied") {
-            Notification.requestPermission().then(permission => {
-                if (permission === "granted") {
-                    new Notification("New Message", {
-                        body: `${data.sender_name}: ${data.content}`,
-                        icon: '{{ url_for("static", filename="images/logo.png") }}'
+        navigator.clipboard.writeText(meetingUrl).then(function() {
+            showToast('Meeting link copied to clipboard', 'success');
+        }, function() {
+            showToast('Failed to copy meeting link', 'danger');
+        });
+    });
+
+    // Approve/Reject Meeting Requests
+    $('.approve-request').click(function() {
+        const requestId = $(this).data('request-id');
+        processRequest(requestId, 'approved');
+    });
+
+    $('.reject-request').click(function() {
+        const requestId = $(this).data('request-id');
+        processRequest(requestId, 'rejected');
+    });
+
+    function processRequest(requestId, action) {
+        $.ajax({
+            url: `/meeting/request/${requestId}/${action}`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                showToast(`Request ${action} successfully`, 'success');
+                setTimeout(() => location.reload(), 1000);
+            },
+            error: function() {
+                showToast(`Error ${action} request`, 'danger');
+            }
+        });
+    }
+
+    // Unsave Resource
+    $('.unsave-resource').click(function() {
+        const resourceId = $(this).data('resource-id');
+        const card = $(this).closest('.col');
+        
+        $.ajax({
+            url: `/resource/${resourceId}/unsave`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    card.fadeOut(300, function() {
+                        $(this).remove();
+                        showToast('Resource removed from saved items', 'success');
                     });
                 }
-            });
-        }
+            },
+            error: function() {
+                showToast('Error removing resource', 'danger');
+            }
+        });
+    });
+    
+    // Request to Join Meeting
+    let meetingToJoin = null;
+    $('.request-join-meeting').click(function() {
+        meetingToJoin = $(this).data('meeting-id');
+        const meetingTitle = $(this).data('meeting-title');
+        $('#meeting-title').val(meetingTitle);
+        $('#requestJoinModal').modal('show');
+    });
+    
+    $('#confirm-request-join').click(function() {
+        if (!meetingToJoin) return;
+        
+        const meetingLink = $('#meeting-link').val();
+        const message = $('#join-message').val();
+        
+        $.ajax({
+            url: `/meeting/${meetingToJoin}/request_join`,
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token() }}'
+            },
+            data: JSON.stringify({
+                meeting_link: meetingLink,
+                message: message
+            }),
+            contentType: 'application/json',
+            success: function(response) {
+                $('#requestJoinModal').modal('hide');
+                showToast('Join request sent to educator', 'success');
+            },
+            error: function(xhr) {
+                let errorMsg = 'Error sending join request';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                }
+                showToast(errorMsg, 'danger');
+            }
+        });
     });
     
     // Helper function to show toast messages
@@ -896,11 +1015,44 @@ $(document).ready(function() {
         $('#toast-container').append(toastHtml);
         setTimeout(() => $('.toast').remove(), 5000);
     }
+});
+// Handle Join Meeting Form
+$('#joinMeetingForm').submit(function(e) {
+    e.preventDefault();
+    const meetingInput = $('#meetingLink').val().trim();
     
-    // Request notification permission on page load
-    if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        Notification.requestPermission();
+    if (!meetingInput) {
+        showToast('Please enter a meeting link or code', 'warning');
+        return;
     }
+    
+    // Extract meeting ID from input (handles both full URL and just the code)
+    let meetingId = meetingInput;
+    
+    // If it's a URL, try to extract the meeting ID
+    if (meetingInput.startsWith('http')) {
+        try {
+            const url = new URL(meetingInput);
+            // Extract last part of path (for /meeting/EDU-1234 format)
+            meetingId = url.pathname.split('/').pop();
+            
+            // Also check for ?meeting= parameter
+            if (!meetingId && url.searchParams.get('meeting')) {
+                meetingId = url.searchParams.get('meeting');
+            }
+        } catch (e) {
+            console.error('Error parsing URL:', e);
+        }
+    }
+    
+    // Validate meeting ID format (starts with EDU-)
+    if (!meetingId.match(/^EDU-[A-Z0-9]+$/i)) {
+        showToast('Invalid meeting code format. Should be like EDU-1234', 'warning');
+        return;
+    }
+    
+    // Redirect to the meeting
+    window.location.href = `/meeting/${meetingId.toUpperCase()}`;
 });
 </script>
 {% endblock %}
