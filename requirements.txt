@@ -8,3 +8,4 @@ bleach
 markdown
 flask_login
 flask_pymongo
+flask_socketio
