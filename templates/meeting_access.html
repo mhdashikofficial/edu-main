@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Private Meeting Access</h4>
+                </div>
+                <div class="card-body">
+                    <p class="lead">This meeting is private. Please enter the access code provided by the meeting host.</p>
+                    
+                    <form method="GET" action="{{ url_for('view_meeting', meeting_id=meeting_id) }}">
+                        <div class="mb-3">
+                            <label for="code" class="form-label">Access Code</label>
+                            <input type="text" class="form-control" id="code" name="code" 
+                                   placeholder="Enter 6-digit code" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            Join Meeting
+                        </button>
+                    </form>
+                    
+                    <div class="mt-3 text-center">
+                        <p>Don't have an access code? Request one from the meeting host.</p>
+                        {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('profile', username=current_user.username) }}" class="btn btn-outline-secondary">
+                            Back to Profile
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

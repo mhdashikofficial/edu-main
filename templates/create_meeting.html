@@ -1,142 +1,120 @@
 {% extends "base.html" %}
 
-{% block head %}
-{{ super() }}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<style>
-    .form-section {
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .section-title {
-        font-weight: 600;
-        color: #2c3e50;
-        margin-bottom: 15px;
-        border-bottom: 1px solid #dee2e6;
-        padding-bottom: 8px;
-    }
-    .feature-icon {
-        font-size: 1.2rem;
-        margin-right: 8px;
-        color: #3498db;
-    }
-    .form-check-label {
-        cursor: pointer;
-    }
-</style>
-{% endblock %}
+{% block title %}Create New Meeting{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h3 class="mb-0"><i class="fas fa-video me-2"></i> Create New Meeting</h3>
+                    <h3 class="card-title">Create New Meeting</h3>
                 </div>
                 <div class="card-body">
                     <form method="POST" action="{{ url_for('create_meeting') }}" id="meetingForm">
                         {{ form.hidden_tag() }}
                         
-                        <!-- Basic Information Section -->
-                        <div class="form-section">
-                            <h5 class="section-title"><i class="fas fa-info-circle feature-icon"></i>Basic Information</h5>
-                            
-                            <div class="mb-3">
-                                {{ form.title.label(class="form-label") }}
-                                {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Enter meeting title") }}
-                                {% for error in form.title.errors %}
-                                    <div class="invalid-feedback">{{ error }}</div>
-                                {% endfor %}
-                                <small class="text-muted">Give your meeting a descriptive title</small>
-                            </div>
-                            
-                            <div class="mb-3">
-                                {{ form.description.label(class="form-label") }}
-                                {{ form.description(class="form-control", rows=3, placeholder="Optional meeting description") }}
-                            </div>
+                        <div class="form-group">
+                            {{ form.title.label(class="form-label") }}
+                            {{ form.title(class="form-control", placeholder="Enter meeting title") }}
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.title.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
                         </div>
                         
-                        <!-- Schedule Section -->
-                        <div class="form-section">
-                            <h5 class="section-title"><i class="fas fa-clock feature-icon"></i>Schedule</h5>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
+                        <div class="form-group mt-3">
+                            {{ form.description.label(class="form-label") }}
+                            {{ form.description(class="form-control", rows=4, placeholder="Meeting description (optional)") }}
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
                                     {{ form.scheduled_time.label(class="form-label") }}
                                     <div class="input-group">
-                                        {{ form.scheduled_time(class="form-control datetimepicker" + (" is-invalid" if form.scheduled_time.errors else "")) }}
-                                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                        {{ form.scheduled_time(class="form-control datetimepicker", type="datetime-local") }}
                                     </div>
-                                    {% for error in form.scheduled_time.errors %}
-                                        <div class="invalid-feedback">{{ error }}</div>
-                                    {% endfor %}
-                                    <small class="text-muted">Leave empty for immediate meeting</small>
+                                    {% if form.scheduled_time.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.scheduled_time.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Leave empty for instant meeting</small>
                                 </div>
-                                
-                                <div class="col-md-6 mb-3">
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
                                     {{ form.duration.label(class="form-label") }}
-                                    <div class="input-group">
-                                        {{ form.duration(class="form-control" + (" is-invalid" if form.duration.errors else "")) }}
-                                        <span class="input-group-text">minutes</span>
-                                    </div>
-                                    {% for error in form.duration.errors %}
-                                        <div class="invalid-feedback">{{ error }}</div>
-                                    {% endfor %}
-                                    <small class="text-muted">Between 15-240 minutes</small>
+                                    {{ form.duration(class="form-control", min=15, max=240) }}
+                                    <small class="form-text text-muted">Minutes (15-240)</small>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Meeting Settings Section -->
-                        <div class="form-section">
-                            <h5 class="section-title"><i class="fas fa-cog feature-icon"></i>Meeting Settings</h5>
-                            
-                            <div class="mb-3">
-                                <div class="form-check form-switch mb-3">
-                                    {{ form.requires_approval(class="form-check-input") }}
-                                    {{ form.requires_approval.label(class="form-check-label") }}
-                                    <small class="text-muted d-block">Participants must request to join</small>
-                                </div>
-                                
-                                <div class="form-check form-switch mb-3">
-                                    {{ form.is_private(class="form-check-input") }}
-                                    {{ form.is_private.label(class="form-check-label") }}
-                                    <small class="text-muted d-block">Only invited users can join</small>
-                                </div>
-                            </div>
+                        <div class="form-check mt-3">
+                            {{ form.requires_approval(class="form-check-input") }}
+                            {{ form.requires_approval.label(class="form-check-label") }}
+                            <small class="form-text text-muted">Participants must request to join</small>
                         </div>
                         
-                        <!-- Features Section -->
-                        <div class="form-section">
-                            <h5 class="section-title"><i class="fas fa-star feature-icon"></i>Features</h5>
-                            
-                            <div class="mb-3">
-                                <div class="form-check form-switch mb-3">
-                                    {{ form.enable_chat(class="form-check-input", checked=True) }}
+                        <div class="form-check mt-3">
+                            {{ form.is_private(class="form-check-input") }}
+                            {{ form.is_private.label(class="form-check-label") }}
+                            <small class="form-text text-muted">Only invited users can join</small>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    {{ form.enable_chat(class="form-check-input") }}
                                     {{ form.enable_chat.label(class="form-check-label") }}
-                                    <small class="text-muted d-block">Enable text chat during meeting</small>
                                 </div>
-                                
-                                <div class="form-check form-switch mb-3">
-                                    {{ form.enable_notes(class="form-check-input", checked=True) }}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    {{ form.enable_notes(class="form-check-input") }}
                                     {{ form.enable_notes.label(class="form-check-label") }}
-                                    <small class="text-muted d-block">Enable collaborative notes</small>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg py-3">
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-video me-2"></i> Create Meeting
                             </button>
-                            <a href="{{ url_for('profile', username=current_user.username) }}" class="btn btn-outline-secondary">
+                            <a href="{{ url_for('profile', username=current_user.username) }}" class="btn btn-outline-secondary ms-2">
                                 Cancel
                             </a>
                         </div>
                     </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Meeting Tips</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Scheduled Meetings:</strong> Will start automatically at the scheduled time
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Instant Meetings:</strong> Start immediately when you create them
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Private Meetings:</strong> Generate an access code you can share with specific participants
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Approval Required:</strong> Review participant requests before granting access
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -146,54 +124,43 @@
 
 {% block scripts %}
 {{ super() }}
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize datetime picker with more options
-    flatpickr(".datetimepicker", {
-        enableTime: true,
-        dateFormat: "Y-m-d H:i",
-        minDate: "today",
-        defaultDate: new Date(),
-        minuteIncrement: 15,
-        time_24hr: true,
-        disableMobile: true, // Better UX on mobile
-        onReady: function(selectedDates, dateStr, instance) {
-            instance.set('minTime', new Date());
+    // Set minimum datetime for the picker (15 minutes from now)
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 15);
+    
+    // Format as YYYY-MM-DDTHH:MM for datetime-local input
+    const minDatetime = now.toISOString().slice(0, 16);
+    document.querySelector('.datetimepicker').min = minDatetime;
+    
+    // Set max datetime (5 hours from now)
+    const maxDatetime = new Date();
+    maxDatetime.setHours(maxDatetime.getHours() + 5);
+    document.querySelector('.datetimepicker').max = maxDatetime.toISOString().slice(0, 16);
+    
+    // Toggle duration field based on scheduled time
+    const scheduledTimeField = document.getElementById('scheduled_time');
+    const durationField = document.getElementById('duration');
+    
+    scheduledTimeField.addEventListener('change', function() {
+        if (this.value) {
+            durationField.disabled = false;
+        } else {
+            durationField.disabled = true;
+            durationField.value = 60; // Default duration for instant meetings
         }
     });
     
-    // Form validation
+    // Initialize form validation
     const form = document.getElementById('meetingForm');
     form.addEventListener('submit', function(e) {
-        const duration = parseInt(document.getElementById('duration').value);
-        if (duration < 15 || duration > 240) {
+        if (!form.checkValidity()) {
             e.preventDefault();
-            alert('Duration must be between 15 and 240 minutes');
-            return false;
+            e.stopPropagation();
         }
-        
-        const scheduledTime = document.getElementById('scheduled_time').value;
-        if (scheduledTime) {
-            const selectedTime = new Date(scheduledTime);
-            const now = new Date();
-            const minTime = new Date(now.getTime() + 15 * 60000); // 15 minutes from now
-            
-            if (selectedTime < minTime) {
-                e.preventDefault();
-                alert('Meeting must be scheduled at least 15 minutes in the future');
-                return false;
-            }
-        }
-        
-        return true;
-    });
-    
-    // Toggle private meeting options
-    const privateToggle = document.getElementById('is_private');
-    privateToggle.addEventListener('change', function() {
-        // You can add dynamic UI changes here if needed
-    });
+        form.classList.add('was-validated');
+    }, false);
 });
 </script>
 {% endblock %}

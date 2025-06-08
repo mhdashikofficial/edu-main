@@ -1,4 +1,6 @@
-
+# ===== Eventlet Patch Must Be First =====
+import eventlet
+eventlet.monkey_patch()
 
 # ===== Standard Library Imports =====
 import os
@@ -21,8 +23,6 @@ import time
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 from collections import defaultdict
-from wtforms.validators import DataRequired, Email, EqualTo, Length
-
 
 # ===== Load Environment Variables Early =====
 from dotenv import load_dotenv
@@ -58,7 +58,7 @@ from wtforms import (
 )
 
 from wtforms.validators import (
-    DataRequired, Email, NumberRange, Optional, ValidationError
+    DataRequired, Email, EqualTo, Length, NumberRange, Optional, ValidationError
 )
 
 from werkzeug.utils import secure_filename
@@ -72,6 +72,7 @@ from bson.json_util import dumps
 from pymongo.errors import ConnectionFailure, OperationFailure, PyMongoError
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from forms import CSRFOnlyForm 
 import atexit
 # ===== Configure Logging =====
 logging.basicConfig(level=logging.DEBUG)
@@ -157,9 +158,11 @@ os.makedirs(app.config['AVATAR_FOLDER'], exist_ok=True)
 # ===== Flask Extensions =====
 csrf = CSRFProtect(app)
 
+
 socketio = SocketIO(
     app,
     cors_allowed_origins="*",
+    async_mode='eventlet',
     manage_session=False
 )
 
@@ -223,6 +226,12 @@ class AdminLoginForm(FlaskForm):
 class ResourceSearchForm(FlaskForm):
     submit = SubmitField('Submit')  # A simple form with a submit button
 
+class DeleteUserForm(FlaskForm):
+    submit = SubmitField('Delete')    
+
+class CSRFOnlyForm(FlaskForm):
+    pass
+
 class AdminUserEditForm(FlaskForm):
     name = StringField('Full Name', validators=[DataRequired()])
     email = StringField('Email', validators=[DataRequired(), validate_email])
@@ -285,7 +294,10 @@ class MeetingForm(FlaskForm):
     title = StringField('Title', validators=[DataRequired()])
     description = TextAreaField('Description')
     scheduled_time = DateTimeField('Scheduled Time', format='%Y-%m-%dT%H:%M', validators=[Optional()])
-    duration = IntegerField('Duration (minutes)', validators=[DataRequired(), NumberRange(min=15, max=240)])
+    duration = IntegerField('Duration (minutes)', validators=[
+        DataRequired(), 
+        NumberRange(min=15, max=240, message='Duration must be between 15 and 240 minutes')
+    ])
     requires_approval = BooleanField('Require approval to join', default=False)
     is_private = BooleanField('Private Meeting (only invited users can join)', default=False)
     enable_chat = BooleanField('Enable meeting chat', default=True)
@@ -423,6 +435,61 @@ def save_uploaded_file(file):
             return None
     return None
 #
+def cleanup_deleted_resources():
+    """Clean up files for deleted resources"""
+    with app.app_context():
+        try:
+            # Get all active resources
+            active_resources = resources.find({}, {'file_url': 1, 'thumbnail': 1})
+            active_files = set()
+            
+            # Collect all active file paths
+            for resource in active_resources:
+                if resource.get('file_url'):
+                    active_files.add(resource['file_url'])
+                if resource.get('thumbnail'):
+                    active_files.add(resource['thumbnail'])
+            
+            # Get all files in upload directory
+            upload_dir = app.config['UPLOAD_FOLDER']
+            for filename in os.listdir(upload_dir):
+                filepath = os.path.join('uploads', filename)
+                if filepath not in active_files:
+                    try:
+                        os.remove(os.path.join(app.static_folder, filepath))
+                        logger.info(f"Deleted orphaned file: {filepath}")
+                    except Exception as e:
+                        logger.error(f"Error deleting file {filepath}: {str(e)}")
+                        
+        except Exception as e:
+            logger.error(f"Error in resource cleanup task: {str(e)}")
+
+def cleanup_old_meetings():
+    """Clean up meetings that are older than expiry time"""
+    with app.app_context():
+        try:
+            expiry_time = datetime.now(timezone.utc) - timedelta(hours=MEETING_EXPIRY_HOURS)
+            
+            # End meetings that are past their scheduled time + duration
+            meetings.update_many(
+                {
+                    'status': {'$ne': 'ended'},
+                    'scheduled_time': {'$lt': expiry_time}
+                },
+                {'$set': {
+                    'status': 'ended',
+                    'ended_at': datetime.now(timezone.utc),
+                    'is_active': False
+                }}
+            )
+            
+            logger.info(f"Cleaned up old meetings (expiry: {MEETING_EXPIRY_HOURS} hours)")
+        except Exception as e:
+            logger.error(f"Error cleaning up old meetings: {str(e)}")
+
+
+
+#
 def get_user_by_id(user_id):
     """Helper function to get user data by ID"""
     try:
@@ -521,6 +588,24 @@ scheduler.add_job(
     name='Disable resources with missing local files',
     replace_existing=True
 )
+# Add to your scheduler
+scheduler.add_job(
+    func=cleanup_deleted_resources,
+    trigger=IntervalTrigger(days=1),
+    id='cleanup_deleted_resources',
+    name='Clean up files for deleted resources',
+    replace_existing=True
+)
+# Add to scheduler
+scheduler.add_job(
+    func=cleanup_old_meetings,
+    trigger=IntervalTrigger(minutes=30),
+    id='cleanup_old_meetings',
+    name='Clean up expired meetings',
+    replace_existing=True
+)
+
+
 scheduler.start()
 
 # 🧹 Ensure scheduler shuts down cleanly on exit
@@ -561,6 +646,16 @@ def ensure_timezone_aware(dt):
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+def validate_scheduled_time(self, field):
+        if field.data:
+            now = datetime.now(timezone.utc)
+            max_schedule_time = now + timedelta(hours=5)
+            
+            if field.data < now + timedelta(minutes=15):
+                raise ValidationError('Meeting must be scheduled at least 15 minutes in the future')
+            if field.data > max_schedule_time:
+                raise ValidationError('Meeting can be scheduled maximum 5 hours in advance')
 
 
 def educator_required(f=None):
@@ -735,10 +830,12 @@ def handle_csrf_error(e):
     flash('The form has expired. Please try again.', 'danger')
     return redirect(request.referrer or url_for('index')), 400
 
+
 @app.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(e):
-    flash('File size exceeds maximum allowed (16MB)', 'danger')
-    return redirect(request.referrer or url_for('index')), 413
+    flash('File size exceeds the maximum allowed limit of 16MB.', 'danger')
+    return redirect(url_for('upload_resource'))
+
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -786,8 +883,9 @@ def timesince(dt):
 @app.route('/')
 def index():
     try:
-        recent_resources = list(resources.find().sort('upload_date', -1).limit(12))
-        popular_resources = list(resources.find().sort('downloads', -1).limit(6))
+        # In your index route:
+        recent_resources = list(resources.find({'is_active': True}).sort('upload_date', -1).limit(12))
+        popular_resources = list(resources.find({'is_active': True}).sort('downloads', -1).limit(6))
         featured_educators = list(users.aggregate([
             {'$match': {'role': 'educator'}},
             {'$sort': {'resources_count': -1}},
@@ -837,7 +935,8 @@ def browse_resources():
         sort_by = request.args.get('sort', 'recent')
         search_query = request.args.get('q', '').strip()  # New search query parameter
 
-        query = {}
+        # In browse_resources route:
+        query = {'is_active': True}
         if category:
             query['category'] = category
         if resource_type != 'all':
@@ -1038,6 +1137,12 @@ def logout():
     flash('You have been logged out', 'info')
     return response
 
+from flask import render_template, abort, flash, redirect, url_for
+from flask_login import login_required, current_user
+from bson import ObjectId
+from collections import defaultdict
+from datetime import datetime, timezone, timedelta
+
 @app.route('/profile/<username>')
 @login_required
 def profile(username):
@@ -1063,7 +1168,36 @@ def profile(username):
         context['unread_messages'] = sum(1 for convo in context['chat_conversations'] if convo.get('unread_count', 0) > 0)
 
         if user_data.get('role') == 'educator':
-            # Educator profile
+            # === Resource Count Aggregation ===
+            resource_counts = resources.aggregate([
+                {'$match': {
+                    'educator_id': str(user_data['_id']),
+                    'is_active': True
+                }},
+                {'$group': {
+                    '_id': '$type',
+                    'count': {'$sum': 1}
+                }}
+            ])
+
+            counts = {
+                'total': 0,
+                'free': 0,
+                'paid': 0
+            }
+
+            for count in resource_counts:
+                if count['_id'] == 'free':
+                    counts['free'] = count['count']
+                elif count['_id'] == 'paid':
+                    counts['paid'] = count['count']
+                counts['total'] += count['count']
+
+            user_data['resources_count'] = counts['total']
+            user_data['free_resources_count'] = counts['free']
+            user_data['premium_resources_count'] = counts['paid']
+
+            # === Educator-Specific Context ===
             now = datetime.now(timezone.utc)
             all_meetings = list(meetings.find({'host_id': str(user_data['_id'])}).sort('scheduled_time', -1))
             educator_meetings = defaultdict(list)
@@ -1114,8 +1248,7 @@ def profile(username):
             })
 
         else:
-            # Student profile
-            purchased_resources = []
+            # === Student Profile Context ===
             if is_own_profile:
                 purchased_resources = list(purchases.aggregate([
                     {'$match': {
@@ -1193,7 +1326,6 @@ def profile(username):
                     }).sort('requested_at', -1).limit(5))
                 })
             else:
-                # Viewing another user's student profile – don't show purchased resources
                 context['purchased_resources'] = []
 
         return render_template('profile.html', **context)
@@ -1992,7 +2124,10 @@ def upload_resource():
                 'comments_count': 0,
                 'file_url': file_url,
                 'thumbnail': thumbnail_url,
-                'is_active': True
+                'created_at': datetime.now(timezone.utc),
+                'updated_at': datetime.now(timezone.utc),
+                'is_active': True,
+                'deleted_at': None
             }
 
             # Insert resource
@@ -2168,21 +2303,44 @@ def delete_resource(resource_id):
             '_id': ObjectId(resource_id),
             'educator_id': current_user.id
         })
+
         if not resource:
             flash('Resource not found or unauthorized', 'danger')
             return redirect(url_for('index'))
 
-        # Soft delete by marking as inactive
-        resources.update_one(
+        # Soft delete instead of hard delete
+        result = resources.update_one(
             {'_id': ObjectId(resource_id)},
-            {'$set': {'is_active': False}}
+            {
+                '$set': {
+                    'is_active': False,
+                    'deleted_at': datetime.now(timezone.utc),
+                    'updated_at': datetime.now(timezone.utc)
+                }
+            }
         )
 
-        flash('Resource has been deactivated', 'success')
+        if result.modified_count > 0:
+            # Update educator's resource counts
+            update_data = {'$inc': {'resources_count': -1}}
+            if resource.get('type') == 'paid':
+                update_data['$inc']['premium_resources_count'] = -1
+            else:
+                update_data['$inc']['free_resources_count'] = -1
+
+            users.update_one(
+                {'_id': ObjectId(current_user.id)},
+                update_data
+            )
+
+            flash('Resource deleted successfully (soft delete)', 'success')
+        else:
+            flash('Unable to delete resource', 'danger')
+
         return redirect(url_for('profile', username=current_user.username))
 
     except Exception as e:
-        logger.error(f"Error deleting resource: {str(e)}")
+        logger.error(f"Error deleting resource: {str(e)}", exc_info=True)
         flash('Error deleting resource', 'danger')
         return redirect(url_for('index'))
 
@@ -2232,20 +2390,30 @@ def create_meeting():
     
     if form.validate_on_submit():
         try:
-            # Generate unique meeting ID
+            # Generate unique meeting ID and access code
             meeting_id = f"EDU-{secrets.token_hex(4).upper()}"
+            access_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
             
             # Convert scheduled_time to UTC if it exists
             scheduled_time = None
             if form.scheduled_time.data:
                 scheduled_time = form.scheduled_time.data.replace(tzinfo=timezone.utc)
-                if scheduled_time < datetime.now(timezone.utc) + timedelta(minutes=15):
+                
+                # Double-check the time constraints (in case form validation was bypassed)
+                now = datetime.now(timezone.utc)
+                max_schedule_time = now + timedelta(hours=5)
+                
+                if scheduled_time < now + timedelta(minutes=15):
                     flash('Meeting must be scheduled at least 15 minutes in the future', 'danger')
+                    return redirect(url_for('create_meeting'))
+                if scheduled_time > max_schedule_time:
+                    flash('Meeting can be scheduled maximum 5 hours in advance', 'danger')
                     return redirect(url_for('create_meeting'))
             
             # Create meeting data
             meeting_data = {
                 'meeting_id': meeting_id,
+                'access_code': access_code,
                 'title': form.title.data,
                 'description': form.description.data,
                 'host_id': current_user.id,
@@ -2267,7 +2435,18 @@ def create_meeting():
             # Insert meeting
             meetings.insert_one(meeting_data)
             
-            flash('Meeting created successfully!', 'success')
+            # Create notification for host with access code
+            notifications.insert_one({
+                'recipient_id': current_user.id,
+                'sender_id': current_user.id,
+                'type': 'meeting_created',
+                'message': f"You've created meeting '{form.title.data}'. Access code: {access_code}",
+                'related_meeting': meeting_id,
+                'read': False,
+                'created_at': datetime.now(timezone.utc)
+            })
+            
+            flash(f'Meeting created successfully! Your access code: {access_code}', 'success')
             return redirect(url_for('view_meeting', meeting_id=meeting_id))
             
         except Exception as e:
@@ -2276,8 +2455,11 @@ def create_meeting():
     
     # For GET requests, set default duration to 60 minutes
     form.duration.data = form.duration.data or 60
-    return render_template('create_meeting.html', form=form)
-
+    
+    # Calculate max datetime for the picker (5 hours from now)
+    max_datetime = (datetime.now(timezone.utc) + timedelta(hours=5)).strftime('%Y-%m-%dT%H:%M')
+    
+    return render_template('create_meeting.html', form=form, max_datetime=max_datetime)
 
 @app.route('/meeting/<meeting_id>')
 @login_required
@@ -2287,68 +2469,83 @@ def view_meeting(meeting_id):
         if not meeting:
             flash('Meeting not found', 'danger')
             return redirect(url_for('index'))
-            
-        # Check if user can access this meeting
-        if meeting.get('is_private') and str(current_user.id) != meeting['host_id']:
-            if str(current_user.id) not in meeting.get('invited_users', []):
-                flash('This is a private meeting and you are not invited', 'danger')
-                return redirect(url_for('index'))
-        
-        # Check if meeting requires approval
-        if meeting.get('requires_approval') and str(current_user.id) != meeting['host_id']:
-            if str(current_user.id) not in meeting.get('participants', []):
-                # Check if request already exists
+
+        user_id = str(current_user.id)
+        host_id = meeting['host_id']
+
+        # Private Meeting Access Check
+        if meeting.get('is_private') and user_id != host_id:
+            invited_users = meeting.get('invited_users', [])
+            if user_id not in invited_users:
+                access_code = request.args.get('code')
+                if not access_code or access_code != meeting.get('access_code'):
+                    flash('This is a private meeting. Enter the access code.', 'danger')
+                    return render_template('meeting_access.html', meeting_id=meeting_id)
+
+        # Approval Required Meeting
+        if meeting.get('requires_approval') and user_id != host_id:
+            if user_id not in meeting.get('participants', []):
                 existing_request = meeting_requests.find_one({
                     'meeting_id': meeting_id,
-                    'user_id': str(current_user.id),
+                    'user_id': user_id,
                     'status': 'pending'
                 })
                 if not existing_request:
-                    # Get host details for the template
-                    host = users.find_one({'_id': ObjectId(meeting['host_id'])})
+                    host = users.find_one({'_id': ObjectId(host_id)})
                     if not host:
                         flash('Meeting host not found', 'danger')
                         return redirect(url_for('index'))
-                        
                     meeting['host_username'] = host['username']
                     return render_template('meeting_request.html', meeting=meeting)
-        
-        # Get host details
-        host = users.find_one({'_id': ObjectId(meeting['host_id'])})
+
+        # Host details for meeting room rendering
+        host = users.find_one({'_id': ObjectId(host_id)})
         if not host:
             flash('Meeting host not found', 'danger')
             return redirect(url_for('index'))
-            
-        # Check if meeting is active
+
+        # Meeting Status Check
         now = datetime.now(timezone.utc)
+
         if meeting.get('status') == 'ended':
             flash('This meeting has ended', 'info')
             return redirect(url_for('index'))
-            
-        # Check scheduled time
-        if meeting.get('scheduled_time') and meeting['scheduled_time'] > now:
-            if str(current_user.id) != meeting['host_id']:
-                flash('Meeting has not started yet', 'info')
-                return redirect(url_for('index'))
-        
-        # Add participant if not already added
-        if str(current_user.id) != meeting['host_id']:
+
+        scheduled = meeting.get('scheduled_time')
+        if scheduled:
+            # Convert to timezone-aware if it's naive
+            if scheduled.tzinfo is None:
+                scheduled = scheduled.replace(tzinfo=timezone.utc)
+
+            if scheduled > now:
+                if user_id != host_id:
+                    flash('Meeting has not started yet', 'info')
+                    return redirect(url_for('index'))
+
+        # Add participant if not host and not already added
+        if user_id != host_id:
             meetings.update_one(
                 {'meeting_id': meeting_id},
-                {'$addToSet': {'participants': str(current_user.id)}}
+                {'$addToSet': {'participants': user_id}}
             )
-        
+
         return render_template('meeting_room.html',
-                            meeting=meeting,
-                            host=host,
-                            current_user=current_user,
-                            jitsi_domain=app.config['JITSI_DOMAIN'],
-                            jitsi_room=meeting['jitsi_room'])
-    
+                               meeting=meeting,
+                               host=host,
+                               current_user=current_user,
+                               jitsi_domain=app.config['JITSI_DOMAIN'],
+                               jitsi_room=meeting['jitsi_room'])
+
     except Exception as e:
         logger.error(f"Error viewing meeting: {str(e)}", exc_info=True)
         flash('Error loading meeting', 'danger')
         return redirect(url_for('index'))
+
+@app.route('/meeting/<meeting_id>/join', endpoint='join_meeting')
+@login_required
+def join_meeting(meeting_id):
+    return redirect(url_for('view_meeting', meeting_id=meeting_id))
+
 
 @app.route('/meeting/<meeting_id>/request_join', methods=['POST'])
 @login_required
@@ -2931,24 +3128,54 @@ def admin_view_user(user_id):
         if not user:
             flash('User not found', 'danger')
             return redirect(url_for('admin_users'))
-            
-        # Get user's resources
+
         user_resources = list(resources.find({'educator_id': str(user['_id'])}))
-        
-        # Get user's payments if they're an educator
-        earnings = 0
-        if user['role'] == 'educator':
-            earnings = payments.aggregate([
+        delete_form = DeleteUserForm()
+
+        total_earnings = 0
+        total_sales = 0
+        recent_purchases = []
+
+        if user.get('role') == 'educator':
+            earnings_cursor = payments.aggregate([
                 {'$match': {'educator_id': str(user['_id'])}},
                 {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
             ])
-            earnings = list(earnings)
-            earnings = earnings[0]['total'] if earnings else 0
-        
-        return render_template('admin/view_user.html',
-                            user=user,
-                            resources=user_resources,
-                            earnings=earnings)
+            earnings_result = list(earnings_cursor)
+            total_earnings = earnings_result[0]['total'] if earnings_result else 0
+
+            total_sales = payments.count_documents({'educator_id': str(user['_id'])})
+
+            raw_purchases = payments.find(
+                {'educator_id': str(user['_id'])}
+            ).sort('purchase_date', -1).limit(10)
+
+            for p in raw_purchases:
+                resource = resources.find_one({'_id': ObjectId(p.get('resource_id'))})
+                buyer = users.find_one({'_id': ObjectId(p.get('buyer_id'))})
+                recent_purchases.append({
+                    'purchase_date': p.get('purchase_date', datetime.now(timezone.utc)),
+                    'amount': p.get('amount', 0),
+                    'resource': {
+                        '_id': resource['_id'],
+                        'title': resource.get('title', 'Untitled')
+                    } if resource else {},
+                    'buyer': {
+                        'username': buyer.get('username', 'Unknown')
+                    } if buyer else {}
+                })
+
+        return render_template(
+            'admin/view_user.html',
+            user=user,
+            form=delete_form,  # ✅ pass form here
+            resources=user_resources,
+            total_earnings=total_earnings,
+            total_sales=total_sales,
+            recent_purchases=recent_purchases,
+            meetings=[],
+            recent_activity=[]
+        )
     except PyMongoError as e:
         logger.error(f"Error viewing user: {str(e)}")
         flash('Error viewing user', 'danger')
@@ -3193,25 +3420,33 @@ def educator_monthly_earnings(educator_id):
 @app.route('/admin/user/<user_id>/delete', methods=['POST'])
 @admin_required
 def admin_delete_user(user_id):
+    form = DeleteUserForm()
+
+    # ✅ This validates CSRF token and submission
+    if not form.validate_on_submit():
+        flash('Invalid or tampered request (CSRF failed)', 'danger')
+        return redirect(url_for('admin_users'))
+
     try:
-        # Don't allow deleting yourself
+        # ✅ Don't allow self-deletion
         if str(current_user.id) == user_id:
             flash('You cannot delete your own account', 'danger')
             return redirect(url_for('admin_users'))
-        
+
         result = users.delete_one({'_id': ObjectId(user_id)})
         if result.deleted_count > 0:
-            # Clean up related data
+            # Clean up related collections
             resources.delete_many({'educator_id': user_id})
             chats.delete_many({'$or': [{'user_id': user_id}, {'educator_id': user_id}]})
             payments.delete_many({'user_id': user_id})
-            
+
             flash('User deleted successfully', 'success')
         else:
             flash('User not found', 'danger')
     except PyMongoError as e:
         logger.error(f"Error deleting user: {str(e)}")
         flash('Error deleting user', 'danger')
+
     return redirect(url_for('admin_users'))
 
 @app.route('/admin/resources', methods=['GET', 'POST'])
@@ -3258,22 +3493,51 @@ def admin_resources():
 @admin_required
 def admin_view_resource(resource_id):
     try:
-        # Retrieve the resource
         resource = get_resource(resource_id)
-        
         if not resource:
             flash('Resource not found', 'danger')
             return redirect(url_for('admin_resources'))
-        
-        # Retrieve the educator and purchase count
+
+        # Safeguard against missing fields
+        resource.setdefault('file_url', '')
+        resource.setdefault('thumbnail', '')
+        resource.setdefault('is_active', True)
+        resource.setdefault('downloads', 0)
+        resource.setdefault('rating', 0)
+        resource.setdefault('rating_count', 0)
+        resource.setdefault('comments_count', 0)
+        resource.setdefault('upload_date', datetime.utcnow())
+        resource.setdefault('updated_at', None)
+        resource.setdefault('category', 'Uncategorized')
+
         educator = users.find_one({'_id': ObjectId(resource['educator_id'])})
-        purchases_count = purchases.count_documents({'resource_id': resource_id, 'status': 'completed'})
-        
-        # Pass the resource to the template
-        return render_template('admin/view_resource.html',
-                               resource=resource,
-                               educator=educator,
-                               purchases_count=purchases_count)
+        if not educator:
+            educator = {
+                '_id': None,
+                'username': 'Unknown',
+                'name': 'Unknown',
+                'specialization': '',
+                'resources_count': 0,
+                'followers': [],
+                'rating': 0
+            }
+
+        purchases_count = purchases.count_documents({
+            'resource_id': resource_id,
+            'status': 'completed'
+        })
+
+        form = CSRFOnlyForm()
+
+
+        return render_template(
+            'admin/view_resource.html',
+            resource=resource,
+            educator=educator,
+            purchases_count=purchases_count,
+             form=form 
+        )
+
     except PyMongoError as e:
         logger.error(f"Error viewing resource {resource_id}: {str(e)}")
         flash('Error viewing resource', 'danger')
@@ -3282,18 +3546,17 @@ def admin_view_resource(resource_id):
 @app.route('/admin/resource/<resource_id>/toggle', methods=['POST'])
 @admin_required
 def admin_toggle_resource(resource_id):
+    form = CSRFOnlyForm()
+    if not form.validate_on_submit():
+        abort(400)
+
     try:
-        # Retrieve the resource
         resource = get_resource(resource_id)
-        
         if not resource:
             flash('Resource not found', 'danger')
             return redirect(url_for('admin_resources'))
-        
-        # Toggle the resource status (active/inactive)
+
         new_status = not resource.get('is_active', False)
-        
-        # Update the resource's status in the database
         resources.update_one(
             {'_id': ObjectId(resource_id)},
             {'$set': {'is_active': new_status}}
