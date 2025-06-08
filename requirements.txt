@@ -6,3 +6,4 @@ gunicorn
 eventlet
 bleach
 markdown
+flask_login
