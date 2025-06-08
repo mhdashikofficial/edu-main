@@ -7,3 +7,4 @@ eventlet
 bleach
 markdown
 flask_login
+flask_pymongo
